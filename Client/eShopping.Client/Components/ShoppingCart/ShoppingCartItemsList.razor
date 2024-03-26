@@ -1,0 +1,61 @@
+﻿@using E = Basket.Core.Entities
+
+@if (shoppingCart == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="productdata">
+        <div>
+            <div class="productrowdata">
+                <label>Name</label>
+                @shoppingCart.UserName
+            </div>
+            <div class="productrowdata">
+                <label>TotalPrice</label>
+                @shoppingCart.TotalPrice.ToString("0.00")
+            </div>
+            <div class="productrowdata">
+                <label>IsDeleted</label>
+                @shoppingCart.IsDeleted
+            </div>
+        </div>
+    </div>
+    <div>
+        <table class="productstable">
+            <thead>
+                <tr class="productsrow">
+                    <th class="productsrowdata">Id</th>
+                    <th class="productsrowdata">ProductName</th>
+                    <th class="productsrowdata">Quantity</th>
+                    <th class="productsrowdata">Price</th>
+                    <th class="productsrowdata">TotalPrice</th>
+                    <th class="productsrowdata">ImageFile</th>
+                    <th class="productsrowdata">IsDeleted</th>
+                </tr>
+            </thead>
+            <tbody>
+                <Virtualize Context="singleShoppingCartItem" TItem="E.ShoppingCartItem" Items=shoppingCart.Items.ToList()>
+                    <ItemContent>
+                        @{
+                            int id = singleShoppingCartItem.Id;
+                        }
+                        <tr class="productsrow" @onclick="(_ => HandleRowClickShoppingCartsAsync(id))">
+                            <td class="productsrowdata">@singleShoppingCartItem.Id</td>
+                            <td class="productsrowdata">@singleShoppingCartItem.ProductName</td>
+                            <td class="productsrowdata">@singleShoppingCartItem.Quantity</td>
+                            <td class="productsrowdata price">@singleShoppingCartItem.Price.ToString("0.00")</td>
+                            <td class="productsrowdata price">@singleShoppingCartItem.TotalPrice.ToString("0.00")</td>
+                            <td class="productsrowdata">@singleShoppingCartItem.ImageFile</td>
+                            <td class="productsrowdata">@singleShoppingCartItem.IsDeleted</td>
+                        </tr>
+                    </ItemContent>
+                    <Placeholder>
+                        <p><em>Loading...</em></p>
+                    </Placeholder>
+                </Virtualize>
+            </tbody>
+        </table>
+    </div>
+}

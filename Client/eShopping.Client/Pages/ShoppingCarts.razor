@@ -1,0 +1,33 @@
+﻿@attribute [Route(PagePathUrl)]
+@attribute [Route(PagePathUrl + "/{Id:int}")]
+@attribute [Route(PagePathUrl + "/{Id:int}/{Id2:int}")]
+@attribute [Route(PagePathUrl + "/{PageAction}")]
+
+@attribute [Authorize]
+
+<PageTitle>Shopping cart</PageTitle>
+
+@using eShopping.Client.Data
+@using Basket.Core.Entities
+
+@switch (CurrentTab)
+{
+    case PageTab.List:
+        <h1>Shopping carts data</h1>
+        <CascadingValue Value="@this" Name="ShoppingCartsPage">
+            <eShopping.Client.Components.ShoppingCart.ShoppingCartsList />
+        </CascadingValue>
+
+        break;
+    case PageTab.Single:
+        <eShopping.Client.Components.ShoppingCart.ShoppingCartItemsList ShoppingCartId=Id />
+        break;
+    case PageTab.SingleItem:
+        <h1>Shopping cart item</h1>
+        <eShopping.Client.Components.ShoppingCart.ShoppingCartItemDetail ShoppingCartId=Id ShoppingCartItemId=Id2 />
+        break;
+    default:
+        <PageNotFound />
+        break;
+
+}

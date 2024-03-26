@@ -1,0 +1,114 @@
+﻿@using eShopping.Client.Data
+@using Catalog.Core.Specs
+@using Catalog.Core.Entities
+
+@if (products == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <InputSelect TValue=int Value=QueryProductCount ValueExpression="(()=>QueryProductCount)" ValueChanged="(async pc => await HandleCountChangeProductsAsync(pc))">
+        <option value=10>10</option>
+        <option value=20>20</option>
+        <option value=50>50</option>
+        <option value=100>100</option>
+    </InputSelect>
+    <InputSelect TValue=int Value=QuerySorting ValueExpression="(()=>QuerySorting)" ValueChanged="(async sort => await HandleSortingChangeAsync(sort))">
+        <option value=@((int)ProductSpecParams.SortingType.NoSorting)>@ProductSpecParams.SortingType.NoSorting.ToString()</option>
+        <optgroup label="Ascending">
+            <option value=@((int)ProductSpecParams.SortingType.AscendingById)>@ProductSpecParams.SortingType.AscendingById.ToString()</option>
+            <option value=@((int)ProductSpecParams.SortingType.AscendingByName)>@ProductSpecParams.SortingType.AscendingByName.ToString()</option>
+            <option value=@((int)ProductSpecParams.SortingType.AscendingByBrandId)>@ProductSpecParams.SortingType.AscendingByBrandId.ToString()</option>
+            <option value=@((int)ProductSpecParams.SortingType.AscendingByBrandName)>@ProductSpecParams.SortingType.AscendingByBrandName.ToString()</option>
+            <option value=@((int)ProductSpecParams.SortingType.AscendingByTypeId)>@ProductSpecParams.SortingType.AscendingByTypeId.ToString()</option>
+            <option value=@((int)ProductSpecParams.SortingType.AscendingByTypeName)>@ProductSpecParams.SortingType.AscendingByTypeName.ToString()</option>
+        </optgroup>
+        <optgroup label="Descending">
+            <option value=@((int)ProductSpecParams.SortingType.DescendingById)>@ProductSpecParams.SortingType.DescendingById.ToString()</option>
+            <option value=@((int)ProductSpecParams.SortingType.DescendingByName)>@ProductSpecParams.SortingType.DescendingByName.ToString()</option>
+            <option value=@((int)ProductSpecParams.SortingType.DescendingByBrandId)>@ProductSpecParams.SortingType.DescendingByBrandId.ToString()</option>
+            <option value=@((int)ProductSpecParams.SortingType.DescendingByBrandName)>@ProductSpecParams.SortingType.DescendingByBrandName.ToString()</option>
+            <option value=@((int)ProductSpecParams.SortingType.DescendingByTypeId)>@ProductSpecParams.SortingType.DescendingByTypeId.ToString()</option>
+            <option value=@((int)ProductSpecParams.SortingType.DescendingByTypeName)>@ProductSpecParams.SortingType.DescendingByTypeName.ToString()</option>
+        </optgroup>
+    </InputSelect>
+    <button @onclick="@(async _ => await HandleCreateNewClickAsync())">Create new product</button>
+    <div>
+        @if (shownItemsAs == ShownAs.AsTable)
+        { 
+            <table class="productstable">
+                <thead>
+                    <tr class="productsrow">
+                        <th class="productsrowdata">Id</th>
+                        <th class="productsrowdata">Name</th>
+                        <th class="productsrowdata">Brand</th>
+                        <th class="productsrowdata">Type</th>
+                        <th class="productsrowdata">Price</th>
+                        <th class="productsrowdata">Description</th>
+                        <th class="productsrowdata">Summary</th>
+                        <th class="productsrowdata">Image</th>
+                        <th class="productsrowdata">IsDeleted</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <Virtualize Context="singleProduct" TItem="Product" Items=products.ToList()>
+                        <ItemContent>
+                            @{
+                                int id = singleProduct.Id;
+                            }
+                            <tr class="productsrow" @onclick="(_ => HandleRowClickAsync(id))">
+                                <td class="productsrowdata">@singleProduct.Id</td>
+                                <td class="productsrowdata">@singleProduct.Name</td>
+                                <td class="productsrowdata">@singleProduct.Brand.Name</td>
+                                <td class="productsrowdata">@singleProduct.Type.Name</td>
+                                <td class="productsrowdata price">@singleProduct.Price.ToString("0.00")</td>
+                                <td class="productsrowdata">@singleProduct.Description</td>
+                                <td class="productsrowdata">@singleProduct.Summary</td>
+                                <td class="productsrowdata productsrowimage" style="background-image: url(@singleProduct.ImageFilePath);"></td>
+                                <td class="productsrowdata">@singleProduct.IsDeleted</td>
+                            </tr>
+                        </ItemContent>
+                        <Placeholder>
+                            <p><em>Loading...</em></p>
+                        </Placeholder>
+                    </Virtualize>
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div style="display:flex;flex-wrap:wrap">
+                <Virtualize Context="singleProduct" TItem="Product" Items=products.ToList()>
+                    <ItemContent>
+                        @{
+                            int id = singleProduct.Id;
+                        }
+                        <div style="padding:10px;cursor:pointer" @onclick="(_ => HandleRowClickAsync(id))">
+                            <div style="max-height:450px;max-width:300px;height:450px;width:300px" >
+                                <div>
+                                    <img src="@singleProduct.ImageFilePath" style="width:40%;float:left;margin:5px"/>
+                                    <div style="font-weight:bold">@singleProduct.Name</div>
+                                </div>
+                                <div>@singleProduct.Description</div>
+                                <div style="text-align:end;text-decoration:underline;color:blue">@singleProduct.Price.ToString("0.00")</div>
+                            </div>
+                        </div>
+                    </ItemContent>
+                    <Placeholder>
+                        <p><em>Loading...</em></p>
+                    </Placeholder>
+                </Virtualize>
+            </div>
+        }
+        <div>
+            <eShopping.Client.Components.Pagination ProductsCountOnPage=@(QueryProductCount)
+                                                    ProductsCountTotal=@(ProductsCount ?? 1)
+                                                    PageIndex=@(QueryPageIndex)
+                                                    OnClickChangePage=@(async (newPageIndex) => await HandlePageIndexChangeAsync(newPageIndex)) />
+            Product count = @ProductsCount
+        </div>
+    </div>
+}
+
+

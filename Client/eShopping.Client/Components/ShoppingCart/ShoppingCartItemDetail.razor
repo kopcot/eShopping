@@ -1,0 +1,34 @@
+﻿@if (shoppingCartItem == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="productdata">
+        <div class="productrowdata">
+            <label>Name</label>
+            @shoppingCartItem.ProductName
+        </div>
+        <div class="productrowdata">
+            <label>Quantity</label>
+            @shoppingCartItem.Quantity
+        </div>
+        <div class="productrowdata">
+            <label>Price</label>
+            @shoppingCartItem.Price.ToString("0.00")
+        </div>
+        <div class="productrowdata">
+            <label>TotalPrice</label>
+            @shoppingCartItem.TotalPrice.ToString("0.00")
+        </div>
+        <div class="productrowdata">
+            <label>ImageFile</label>
+            @shoppingCartItem.ImageFile
+        </div>
+        <div class="productrowdata">
+            <label>IsDeleted</label>
+            @shoppingCartItem.IsDeleted
+        </div>
+    </div>
+
+}

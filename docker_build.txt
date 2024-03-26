@@ -1,0 +1,18 @@
+docker build -t eshoping.client:dev16 -t eshoping.client:latest  --file Client/eShopping.Client/Dockerfile . && \
+cd Services/Catalog/ &&  docker build -t eshoping.catalog.api:dev16 -t eshoping.catalog.api:latest . && \
+cd ../Basket/ &&  docker build -t eshoping.basket.api:dev16 -t eshoping.basket.api:latest . && \
+cd ../.. &&  echo Build-done, starting save &&  \
+docker save eshoping.client:dev16 | gzip > DockerImage/eshoping.client.dev16.tar.gz && \
+docker save eshoping.catalog.api:dev16 | gzip > DockerImage/eshoping.catalog.api.dev16.tar.gz && \
+docker save eshoping.basket.api:dev16 | gzip > DockerImage/eshoping.basket.api.dev16.tar.gz && \
+echo Save-done, starting prune &&  \
+docker image prune -a -f &&  echo Prune-done, starting load  && \
+docker load < DockerImage/eshoping.client.dev16.tar.gz && \
+docker load < DockerImage/eshoping.catalog.api.dev16.tar.gz && \
+docker load < DockerImage/eshoping.basket.api.dev16.tar.gz && \
+docker image tag eshoping.client:dev16 eshoping.client:latest && \
+docker image tag eshoping.catalog.api:dev16 eshoping.catalog.api:latest && \
+docker image tag eshoping.basket.api:dev16 eshoping.basket.api:latest && \
+echo Load-done, starting compose create  && \
+COMPOSE_PARALLEL_LIMIT=3 docker compose -p eshoping-app-1 up -d
+echo Done

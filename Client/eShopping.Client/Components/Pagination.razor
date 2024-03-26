@@ -1,0 +1,79 @@
+﻿<div class="pagination">
+    <ul class="paginationrow">
+        @if (_startingPage < _minShowPageIndexesBefore)
+        {
+            <li class="paginationitem-value" @onclick="@(async () => await OnClickChangePage.InvokeAsync(0))" >
+                1
+            </li>
+            <li class="paginationitem-space">
+                ...
+            </li>
+        }
+        @for (long i = _minShowPageIndexesBefore; i < _maxShowPageIndexesAfter; i++)
+        {
+            long id = i;
+            <li class="paginationitem-value" @onclick="@(async () => await OnClickChangePage.InvokeAsync(id))">
+                @if (PageIndex != i)
+                {
+                    @(i + 1)
+                }
+                else
+                {
+                    <span class="paginationitem-selected">
+                        @(i + 1)
+                    </span>
+                }
+            </li>
+        }
+        @if (_endingPagePage > _maxShowPageIndexesAfter)
+        {
+            <li class="paginationitem-space">
+                ...
+            </li>
+            <li class="paginationitem-value" @onclick="@(async () => await OnClickChangePage.InvokeAsync(_endingPagePage-1))">
+                @_endingPagePage
+            </li>
+        }
+    </ul>
+    <InputNumber 
+        class="pagination-inputnumber"
+        Value=_pageIndexForInputBox 
+        TValue=long
+        ValueChanged="(async (id) => await OnClickChangePage.InvokeAsync(id - 1))"
+        ValueExpression="(() => _pageIndexForInputBox)"
+        EnableMinMax="true" 
+        Min="@(_startingPage+1)" 
+        Max="@(_endingPagePage)"
+        />
+</div>
+@code {
+    #region Parameters
+    [Parameter, EditorRequired]
+    public long ProductsCountOnPage { get; set; }
+    [Parameter, EditorRequired]
+    public long ProductsCountTotal { get; set; }
+    [Parameter, EditorRequired]
+    public long PageIndex { get; set; }
+    [Parameter]
+    public long MaxShowPageIndexesBefore { get; set; } = 5;
+    [Parameter]
+    public long MaxShowPageIndexesAfter { get; set; } = 5;
+    [Parameter, EditorRequired]
+    public EventCallback<long> OnClickChangePage { get; set; }
+    #endregion Parameters
+
+    private long _startingPage = 0;
+    private long _endingPagePage = 0;
+    private long _minShowPageIndexesBefore;
+    private long _maxShowPageIndexesAfter;
+    private long _pageIndexForInputBox => PageIndex + 1;
+
+    public override async Task SetParametersAsync(ParameterView parameters)
+    {
+        await base.SetParametersAsync(parameters);
+        _startingPage = 0;
+        _endingPagePage = (long)Math.Ceiling((double)ProductsCountTotal / ProductsCountOnPage);
+        _minShowPageIndexesBefore = Math.Max(PageIndex - MaxShowPageIndexesBefore, 0);
+        _maxShowPageIndexesAfter = Math.Min(PageIndex + MaxShowPageIndexesAfter, _endingPagePage);
+    }
+}

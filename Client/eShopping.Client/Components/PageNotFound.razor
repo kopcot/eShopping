@@ -1,0 +1,10 @@
+﻿<PageTitle>Page not found</PageTitle>
+<div style="background-color: orangered;">
+    <p role="alert" >Sorry, there's nothing at this address.</p>
+    @Navigation?.Uri
+</div>
+
+@code {
+    [Inject]
+    private NavigationManager Navigation { get; set; }
+}

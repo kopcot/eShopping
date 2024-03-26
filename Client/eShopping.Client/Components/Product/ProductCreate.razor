@@ -1,0 +1,122 @@
+﻿@if (ProductsImageFolders == null ||
+   ProductBrands == null ||
+   ProductTypes == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div style="display: flex;justify-content: space-between;flex-wrap: wrap;">
+        <EditForm Model="NewProduct" OnValidSubmit="(Submit)" FormName="CreateNewProduct">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="productdata">
+                <div style="max-width:50%">
+                    <div class="productrowdata">
+                        <label>Name:</label>
+                        <InputText @bind-Value="NewProduct!.Name" />
+                    </div>
+                    <div class="productrowdata">
+                        <label>Summary:</label>
+                        <InputText @bind-Value="NewProduct!.Summary" />
+                    </div>
+                    <div class="productrowdata">
+                        <label>Description:</label>
+                        <InputText @bind-Value="NewProduct!.Description" />
+                    </div>
+                    <div class="productrowdata">
+                        <label>ImageFileName:</label>
+                        <InputText @bind-Value="NewProduct!.ImageFileName" />
+                    </div>
+                    <div class="productrowdata">
+                        <label>ImageFolder:</label>
+                        <InputSelect TValue=string
+                                     Value=NewProduct!.ImageFileDirectory!.Directory
+                                     ValueExpression="(()=>NewProduct!.ImageFileDirectory!.Directory)"
+                                     ValueChanged="(x => NewProduct!.ImageFileDirectory = ProductsImageFolders.FirstOrDefault(pif => pif.Directory == x))">
+                            @foreach (var imageFolder in ProductsImageFolders)
+                            {
+                                <option value=@imageFolder.Directory>@imageFolder.Directory</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="productrowdata">
+                        <label>Brand:</label>
+                        <InputSelect TValue=string
+                                     Value=NewProduct!.Brand!.Name
+                                     ValueExpression="(()=>NewProduct!.Brand!.Name)"
+                                     ValueChanged="(x => NewProduct!.Brand = ProductBrands.FirstOrDefault(pif => pif.Name == x))">
+                            @foreach (var productBrand in ProductBrands)
+                            {
+                                <option value=@productBrand.Name>@productBrand.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="productrowdata">
+                        <label>Type:</label>
+                        <InputSelect TValue=string
+                                     Value=NewProduct!.Type!.Name
+                                     ValueExpression="(()=>NewProduct!.Type!.Name)"
+                                     ValueChanged="(x => NewProduct!.Type = ProductTypes.FirstOrDefault(pif => pif.Name == x))">
+                            @foreach (var productType in ProductTypes)
+                            {
+                                <option value=@productType.Name>@productType.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </div>
+            </div>
+            <button type="submit">Submit</button>
+        </EditForm>
+        <div>
+            <div>
+                @if (SelectedImageFolder != null)
+                {
+                    <InputSelect TValue=string
+                                 Value=SelectedImageFolder.Directory
+                                 ValueExpression="(()=>SelectedImageFolder.Directory)"
+                                 ValueChanged="(x => SelectedImageFolder = ProductsImageFolders.FirstOrDefault(pif => pif.Directory == x))">
+                        @foreach (var imageFolder in ProductsImageFolders)
+                        {
+                            <option value=@imageFolder.Directory>@imageFolder.Directory</option>
+                        }
+
+                        <option value=@ProductsImageFoldersOptionCreateNew>@ProductsImageFoldersOptionCreateNew</option>
+                    </InputSelect>
+                }
+                else
+                {
+                    <InputText class="InputBoxComboBox"
+                               Value=@NewImageFolder
+                               ValueExpression="(()=>NewImageFolder)"
+                               ValueChanged="((x)=>NewImageFolder = x)">
+                    </InputText>
+                    <button @onclick="(async _ => await HandleOnClickAddImageLocationAsync())">
+                        Create
+                    </button>
+                    <button @onclick="(async _ => SelectedImageFolder = ProductsImageFolders.FirstOrDefault())">
+                        Cancel
+                    </button>
+                }
+            </div>
+            <div>
+                <InputFile OnChange="(async inputFileChange => await HandleOnChangeUploadBitmapAsync(inputFileChange))" accept="image/*" />
+            </div>
+            @if (InputFileSource != null)
+            {
+                <InputText class="InputBoxComboBox"
+                           Value=@FileNameTarget
+                           ValueExpression="(()=>FileNameTarget)"
+                           ValueChanged="((x)=>FileNameTarget = x)">
+                </InputText>
+                <div>
+                    <button @onclick="(async _ => await HandleUploadBitmapAsync())" accept="image/*">
+                        Upload file
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+

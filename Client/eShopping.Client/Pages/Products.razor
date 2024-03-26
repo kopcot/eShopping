@@ -1,0 +1,35 @@
+﻿@attribute [Route(PagePathUrl)]
+@attribute [Route(PagePathUrl + "/{Id:int}")]
+@attribute [Route(PagePathUrl + "/{PageAction}")]
+
+@attribute [Authorize]
+
+@using eShopping.Client.Data
+@using Catalog.Core.Specs
+@using Catalog.Core.Entities
+
+<PageTitle>Catalog</PageTitle>
+
+@switch (CurrentTab)
+{
+    case PageTab.List:
+        <h1>Catalog data</h1>
+        <CascadingValue Value="@this" Name="ProductsPage" >
+            <eShopping.Client.Components.Product.ProductsList />
+        </CascadingValue>
+        break;
+    case PageTab.Single:
+        <h1>Product data</h1>
+        <eShopping.Client.Components.Product.ProductDetail ProductId=Id />
+        break;
+
+    case PageTab.CreateNew:
+        <h1>Create a new product data</h1>
+        <eShopping.Client.Components.Product.ProductCreate PagePathUrl=PagePathUrl />
+        break;
+    default:
+        <PageNotFound />
+        break;
+}
+
+

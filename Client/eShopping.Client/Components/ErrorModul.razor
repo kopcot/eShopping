@@ -1,0 +1,54 @@
+﻿@using eShopping.Client.Data
+@using eShopping.Client.Entities
+
+@if (Errors.Any())
+{ 
+    <div style="border:solid 5px orange">
+        <div style="max-height:200px;overflow-y:scroll">
+            @foreach(var singleError in Errors)
+            {
+                ErrorData errorData = singleError;
+                <div style="display:flex;justify-content:space-between;border-bottom:dashed 1px gray">
+                    <p style="display:inline-grid;;">
+                        <div>
+                            @singleError.DateTimeCreated.ToString("MM/dd/yyyy hh:mm:ss.fff")
+                        </div>
+                        <div>
+                            Error id = @singleError.Id
+                        </div>
+                        @if (!string.IsNullOrEmpty(singleError.Uri))
+                        {
+                            <div>
+                                Url = @singleError.Uri
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(singleError.Uri))
+                        {
+                            <div>
+                                <span>ErrorNbr = @singleError.Error</span>
+                            </div>
+                        }
+                        <br>
+                        <div>
+                            @singleError.Message
+                        </div>
+                        @if (!string.IsNullOrEmpty(singleError.DebugMessage))
+                        {
+                            <div>
+                                @singleError.DebugMessage
+                            </div>
+                            <br>
+                        }
+                    </p>
+                    <button @onclick="(async () => await HandleAcceptErrorButtonAsync(errorData))">
+                        Accept
+                    </button>
+                </div>
+            }
+        </div>
+        <button @onclick="(async () => await HandleAcceptButtonAsync())" >
+            Accept all messages
+        </button>
+    </div>
+}
+

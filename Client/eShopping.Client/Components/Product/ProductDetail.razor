@@ -1,0 +1,73 @@
+﻿@if (Product == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+
+    <div class="productdata">
+        <div style="max-width:50%">
+            <div class="productrowdata">
+                <label>Name</label>
+                @Product.Name
+            </div>
+            <div class="productrowdata">
+                <label>Summary</label>
+                @Product.Summary
+            </div>
+            <div class="productrowdata">
+                <label>Description</label>
+                @Product.Description
+            </div>
+            <div class="productrowdata">
+                <label>ImageFile</label>
+                @Product.ImageFilePath
+            </div>
+            <div class="productrowdata">
+                <label>IsDeleted</label>
+                @Product.IsDeleted
+            </div>
+            <div class="productrowdata">
+                <label>Price</label>
+                @Product.Price
+            </div>
+            <div class="productrowdata">
+                <label>BrandID</label>
+                @Product.BrandID
+            </div>
+            <div class="productrowdata">
+                <label>Brand → Id</label>
+                @Product.Brand.Id
+            </div>
+            <div class="productrowdata">
+                <label>Brand → Name</label>
+                @Product.Brand.Name
+            </div>
+            <div class="productrowdata">
+                <label>Brand → IsDeleted</label>
+                @Product.Brand.IsDeleted
+            </div>
+            <div class="productrowdata">
+                <label>TypeID</label>
+                @Product.TypeID
+            </div>
+            <div class="productrowdata">
+                <label>Type → Id</label>
+                @Product.Type.Id
+            </div>
+            <div class="productrowdata">
+                <label>Type → Name</label>
+                @Product.Type.Name
+            </div>
+            <div class="productrowdata">
+                <label>Type → IsDeleted</label>
+                @Product.Type.IsDeleted
+            </div>
+        </div>
+        <div>
+            <img src=@Product.ImageFilePath style="max-height:500px;vertical-align: top;" />
+        </div>
+    </div>
+}
+
+

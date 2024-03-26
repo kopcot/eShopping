@@ -1,0 +1,12 @@
+﻿<AuthorizeView>
+    <Authorized>
+        <label>@context.User.Claims.First().Value</label>
+        <form action="user/logout" method="post">
+            <input type="submit" value="Logout"/>
+        </form>
+    </Authorized>
+    <NotAuthorized>
+        <text>Not authorized user</text>
+    </NotAuthorized>
+</AuthorizeView>
+

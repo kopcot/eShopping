@@ -1,0 +1,134 @@
+version: '3.7'
+name: eshopping-app-1
+
+x-general: &general
+  pull_policy: build
+  environment:
+    - ASPNETCORE_ENVIRONMENT=Development #for swagger-UI
+  volumes:
+    - /etc/timezone:/etc/timezone:ro
+    - /etc/localtime:/etc/localtime:ro
+  networks:
+    - eshopping_net
+  restart: unless-stopped
+  build:
+    platforms:
+      - "linux/arm64"
+    args:
+      BUILD_CONFIGURATION: Release
+      BUILD_PLATFORMS: linux-arm64
+    cache_from:
+      - eshopping_catalog_api
+      - eshopping_basket_api
+      - eshopping_users_api
+      - eshopping_client
+    target:
+      - restorer
+#      - build
+  deploy:
+    replicas: 1
+    resources:
+      limits:
+        memory: 1024M
+      reservations:
+        memory: 64M
+    update_config:
+      parallelism: 1
+      delay: 10s
+      order: stop-first
+
+services:
+  eshopping_redis_cache:
+    container_name: eshopping_redis_cache
+    image: redis:alpine
+    restart: "no"
+    ports:
+      - "6379:6379"
+    command: sh -c "redis-server --save 60 10 --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81"
+    volumes: 
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - redis_cachedata:/data
+    networks:
+      - eshopping_net
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 64M
+  eshopping_catalog_api:
+    <<: *general
+    container_name: eshopping_catalog_api
+    build:
+      context: /share/Public/repos/eShopping/
+      dockerfile: /share/Public/repos/eShopping/Services/Catalog/Dockerfile
+      tags: 
+        - eshopping.catalog.api:${IMAGE_TAG:-latest}
+    image: eshopping.catalog.api:${IMAGE_TAG:-latest}
+    ports:
+      - "9010:8080"
+  eshopping_basket_api:
+    <<: *general
+    container_name: eshopping_basket_api
+    build:
+      context: /share/Public/repos/eShopping/
+      dockerfile: /share/Public/repos/eShopping/Services/Basket/Dockerfile
+      tags: 
+        - eshopping.basket.api:${IMAGE_TAG:-latest}
+    image: eshopping.basket.api:${IMAGE_TAG:-latest}
+    ports:
+      - "9012:8080"
+  eshopping_users_api:
+    <<: *general
+    container_name: eshopping_users_api
+    build:
+      context: /share/Public/repos/eShopping/
+      dockerfile: /share/Public/repos/eShopping/Services/Users/Dockerfile
+      tags: 
+        - eshopping.users.api:${IMAGE_TAG:-latest}
+    image: eshopping.users.api:${IMAGE_TAG:-latest}
+    ports:
+      - "9014:8080"
+  eshopping_client:
+    <<: *general
+    container_name: eshopping_client
+    build:
+      context: /share/Public/repos/eShopping/
+      dockerfile: /share/Public/repos/eShopping/Client/eShopping.Client/Dockerfile
+      tags:
+        - eshopping.client:${IMAGE_TAG:-latest}
+    image: eshopping.client:${IMAGE_TAG:-latest} 
+    ports:
+      - "9050:8080"
+    volumes:
+      - physdata:/app/Data:rw
+    environment:
+      - PHYSICALFOLDER_LOCATION=/app/Data/
+    depends_on:
+      eshopping_catalog_api:
+        condition: service_healthy
+      eshopping_basket_api:
+        condition: service_healthy
+      eshopping_users_api:
+        condition: service_healthy
+      eshopping_redis_cache:
+        condition: service_started
+    
+networks:
+  eshopping_net:
+    name: "eshopping_network"
+    driver: bridge
+
+volumes:
+  physdata:
+    name: "eshopping_external_data"
+    driver: local
+    driver_opts:
+      device: /share/Web/eshopping_data
+      o: bind
+      type: local
+  redis_cachedata:
+    name: "eshopping_redis_cachedata"
+    driver: local

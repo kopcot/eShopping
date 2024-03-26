@@ -1,0 +1,23 @@
+﻿@attribute [Route(PagePathUrl)]
+
+<h1>Please login</h1>
+<form action="user/login" method="post">
+    <div class="productdata" style="display:table">
+        <div class="productrowdata">
+            <label>name</label>
+            <input type="text" name="name" />
+        </div>
+        <div class="productrowdata">
+            <label>password</label>
+            <input type=@passwordType name="password" />
+            <InputCheckbox @bind-Value=showPassword />
+        </div>
+        <input type="submit" value="Login" />
+    </div>
+</form>
+
+@code {
+    private bool showPassword { get; set; }
+    private string passwordType => showPassword ? "text" : "password";
+    public const string PagePathUrl = "/login";
+}

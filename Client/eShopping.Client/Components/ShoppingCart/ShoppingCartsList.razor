@@ -1,0 +1,54 @@
+﻿@using E = Basket.Core.Entities
+
+@if (shoppingCarts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <InputSelect TValue=int Value=QueryProductCount ValueExpression="(()=>QueryProductCount)" ValueChanged="(async pc => await HandleCountChangeShoppingCartsAsync(pc))">
+        <option value=10>10</option>
+        <option value=20>20</option>
+        <option value=50>50</option>
+        <option value=100>100</option>
+    </InputSelect>
+    <div>
+        <table class="productstable">
+            <thead>
+                <tr class="productsrow">
+                    <th class="productsrowdata">Id</th>
+                    <th class="productsrowdata">UserName</th>
+                    <th class="productsrowdata">Items</th>
+                    <th class="productsrowdata">TotalPrice</th>
+                    <th class="productsrowdata">IsDeleted</th>
+                </tr>
+            </thead>
+            <tbody>
+                <Virtualize Context="singleShoppingCart" TItem="E.ShoppingCart" Items=shoppingCarts.ToList()>
+                    <ItemContent>
+                        @{
+                            int id = singleShoppingCart.Id;
+                        }
+                        <tr class="productsrow" @onclick="(_ => HandleRowClickShoppingCartsAsync(id))">
+                            <td class="productsrowdata">@singleShoppingCart.Id</td>
+                            <td class="productsrowdata">@singleShoppingCart.UserName</td>
+                            <td class="productsrowdata">@singleShoppingCart.Items.Count</td>
+                            <td class="productsrowdata price">@singleShoppingCart.TotalPrice.ToString("0.00")</td>
+                            <td class="productsrowdata">@singleShoppingCart.IsDeleted</td>
+                        </tr>
+                    </ItemContent>
+                    <Placeholder>
+                        <p><em>Loading...</em></p>
+                    </Placeholder>
+                </Virtualize>
+            </tbody>
+        </table>
+        <div>
+            <eShopping.Client.Components.Pagination ProductsCountOnPage=@(QueryProductCount)
+                                                    ProductsCountTotal=@(shoppingCartsCount ?? 1)
+                                                    PageIndex=@(QueryPageIndex)
+                                                    OnClickChangePage=@(async (newPageIndex) => await HandlePageIndexChangeShoppingCartsAsync(newPageIndex)) />
+            Shopping carts count = @shoppingCartsCount
+        </div>
+    </div>
+}
