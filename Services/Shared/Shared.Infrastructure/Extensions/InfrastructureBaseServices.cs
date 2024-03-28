@@ -13,9 +13,9 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using AspNetCoreRateLimit;
 using System.Net;
-using Google.Protobuf.WellKnownTypes;
-using System.Reflection;
 using Microsoft.Extensions.Caching.Distributed;
+using StackExchange.Redis;
+using System.Configuration;
 
 namespace Shared.Infrastructure.Extensions
 {
@@ -180,14 +180,23 @@ namespace Shared.Infrastructure.Extensions
         {
             ArgumentNullException.ThrowIfNull(redisConnectionString);
 
+            IConnectionMultiplexer connectionMultiplexer = ConnectionMultiplexer.Connect(redisConnectionString);
+            serviceCollection.AddSingleton(connectionMultiplexer);
+
             serviceCollection.AddStackExchangeRedisCache(option =>
             {
-                option.Configuration = redisConnectionString;
+                //option.Configuration = redisConnectionString;
                 option.InstanceName = instanceName;
+                option.ConnectionMultiplexerFactory = () =>
+                {
+                    // option.ConnectionMultiplexerFactory is used only if option.Configuration is null 
+                    return Task.FromResult(connectionMultiplexer);
+                };
             });
-            serviceCollection.AddScoped<IRedisCache, RedisCache>(option => 
+            serviceCollection.AddSingleton<IRedisCache, RedisCache>(option => 
                 new (option.GetRequiredService<IDistributedCache>(), 
-                     TimeSpan.FromMinutes(5)));
+                     TimeSpan.FromMinutes(5),
+                     option.GetRequiredService<IConnectionMultiplexer>()));
         }
     }
 }

@@ -51,6 +51,12 @@ services:
       - redis_cachedata:/data
     networks:
       - eshopping_net
+    healthcheck:
+      test: redis-cli -a eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81 ping | grep PONG
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     deploy:
       replicas: 1
       resources:
@@ -114,7 +120,7 @@ services:
       eshopping_users_api:
         condition: service_healthy
       eshopping_redis_cache:
-        condition: service_started
+        condition: service_healthy
     
 networks:
   eshopping_net:

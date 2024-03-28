@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
+using StackExchange.Redis;
 using System.Text;
 
 namespace Shared.Infrastructure.Data
@@ -8,14 +9,23 @@ namespace Shared.Infrastructure.Data
     {
         private readonly IDistributedCache _cache;
         private readonly TimeSpan _expirationTime;
-        public RedisCache(IDistributedCache cache, TimeSpan expirationTime)
+        private readonly IConnectionMultiplexer _connectionMultiplexer;
+        private readonly IDatabase _database;
+        public RedisCache(IDistributedCache cache, TimeSpan expirationTime, IConnectionMultiplexer connectionMultiplexer)
         {
             _cache = cache;
             _expirationTime = expirationTime;
+            _connectionMultiplexer = connectionMultiplexer;
+            _database = _connectionMultiplexer.GetDatabase();
         }
         public async Task<(bool, T?)> GetRedisCacheDataAsync<T>(HttpContext context, CancellationToken cancellationToken = default)
         {
-            var redisJsonValue = await _cache.GetStringAsync(GetRedisKey(context), cancellationToken);
+            var redisKey = GetRedisKey(context);
+
+            if (!_database.IsConnected(redisKey))
+                return (false, default(T));
+
+            var redisJsonValue = await _cache.GetStringAsync(redisKey, cancellationToken);
             if (redisJsonValue == null)
                 return (false, default(T));
 
@@ -28,25 +38,40 @@ namespace Shared.Infrastructure.Data
         }
         public async Task StoreRedisCacheData<T>(HttpContext context, T value, CancellationToken cancellationToken = default)
         {
+            var redisKey = GetRedisKey(context);
+
+            if (!_database.IsConnected(redisKey))
+                return;
+
             await Task.Run(async () => 
             {
                 string redisJsonValue = System.Text.Json.JsonSerializer.Serialize<T>(value);
 
-                await _cache.SetStringAsync(GetRedisKey(context),
+                await _cache.SetStringAsync(redisKey,
                     redisJsonValue,
                     new DistributedCacheEntryOptions()
                     {
                         AbsoluteExpirationRelativeToNow = _expirationTime
                     });
-            });
+            }, cancellationToken);
         }
         public async Task RemoveRedisCacheDataAsync(HttpContext context, CancellationToken cancellationToken = default)
         {
-            await _cache.RemoveAsync(GetRedisKey(context), cancellationToken);
+            var redisKey = GetRedisKey(context);
+
+            if (!_database.IsConnected(redisKey))
+                return;
+
+            await _cache.RemoveAsync(redisKey, cancellationToken);
         }
         public async Task RefreshRedisCacheDataAsync(HttpContext context, CancellationToken cancellationToken = default)
         {
-            await _cache.RefreshAsync(GetRedisKey(context), cancellationToken);
+            var redisKey = GetRedisKey(context);
+
+            if (!_database.IsConnected(redisKey))
+                return;
+
+            await _cache.RefreshAsync(redisKey, cancellationToken);
         }
         private static string GetRedisKey(HttpContext context) 
         {
