@@ -3,6 +3,7 @@ name: eshopping-app-1
 
 x-general: &general
   pull_policy: build
+  platform: linux/arm64/v8
   environment:
     - ASPNETCORE_ENVIRONMENT=Development #for swagger-UI
   volumes:
@@ -16,7 +17,7 @@ x-general: &general
       - "linux/arm64"
     args:
       BUILD_CONFIGURATION: Release
-      BUILD_PLATFORMS: linux-arm64
+      BUILD_PLATFORMS: linux-musl-arm64
     cache_from:
       - eshopping_catalog_api
       - eshopping_basket_api
@@ -41,7 +42,7 @@ services:
   eshopping_redis_cache:
     container_name: eshopping_redis_cache
     image: redis:alpine
-    restart: "no"
+    restart: unless-stopped
     ports:
       - "6379:6379"
     command: sh -c "redis-server --save 60 10 --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81"
