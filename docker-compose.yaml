@@ -1,31 +1,8 @@
 version: '3.7'
 name: eshopping-app-1
 
-x-general: &general
-  pull_policy: build
-  platform: linux/arm64/v8
-  environment:
-    - ASPNETCORE_ENVIRONMENT=Development #for swagger-UI
-  volumes:
-    - /etc/timezone:/etc/timezone:ro
-    - /etc/localtime:/etc/localtime:ro
-  networks:
-    - eshopping_net
-  restart: unless-stopped
-  build:
-    platforms:
-      - "linux/arm64"
-    args:
-      BUILD_CONFIGURATION: Release
-      BUILD_PLATFORMS: linux-musl-arm64
-    cache_from:
-      - eshopping_catalog_api
-      - eshopping_basket_api
-      - eshopping_users_api
-      - eshopping_client
-    target:
-      - restorer
-#      - build
+
+x-generaldeploy: &generaldeploy
   deploy:
     replicas: 1
     resources:
@@ -38,8 +15,38 @@ x-general: &general
       delay: 10s
       order: stop-first
 
+x-general: &general
+  <<: *generaldeploy
+  pull_policy: build
+  platform: linux/amd64
+  environment:
+    - IMAGE_TAG=newest
+    - ASPNETCORE_ENVIRONMENT=Development #for swagger-UI
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://eshopping_jaegertracing:4318
+  volumes:
+    - /etc/timezone:/etc/timezone:ro
+    - /etc/localtime:/etc/localtime:ro
+  networks:
+    - eshopping_net
+  restart: unless-stopped
+  build:
+    platforms:
+      - "linux/amd64"
+    args:
+      BUILD_CONFIGURATION: Release
+      BUILD_PLATFORMS: linux-musl-amd64
+    cache_from:
+      - eshopping_catalog_api
+      - eshopping_basket_api
+      - eshopping_users_api
+      - eshopping_client
+    target:
+      - restorer
+#      - build
+
 services:
   eshopping_redis_cache:
+    <<: *generaldeploy
     container_name: eshopping_redis_cache
     image: redis:alpine
     restart: unless-stopped
@@ -47,8 +54,6 @@ services:
       - "6379:6379"
     command: sh -c "redis-server --save 60 10 --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81"
     volumes: 
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
       - redis_cachedata:/data
     networks:
       - eshopping_net
@@ -58,13 +63,25 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          memory: 1024M
-        reservations:
-          memory: 64M
+  eshopping_jaegertracing:
+    <<: *generaldeploy
+    container_name: eshopping_jaegertracing
+    image: jaegertracing/all-in-one:latest
+    restart: "no"
+    ports:
+#      - "4317:4317"
+#      - "4318:4318"
+      - "16686:16686"
+#      - "6831:6831/udp"
+    volumes: 
+      - jaegertracing_tmpdata:/tmp
+    networks:
+      - eshopping_net
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    depends_on:
+      eshopping_client:
+        condition: service_started
   eshopping_catalog_api:
     <<: *general
     container_name: eshopping_catalog_api
@@ -122,6 +139,25 @@ services:
         condition: service_healthy
       eshopping_redis_cache:
         condition: service_healthy
+  eshopping_serviceclient:
+    <<: *general
+    container_name: eshopping_serviceclient
+    build:
+      context: /share/Public/repos/eShopping/
+      dockerfile: /share/Public/repos/eShopping/Client/eShopping.ServiceClient/Dockerfile
+      tags:
+        - eshopping.serviceclient:${IMAGE_TAG:-latest}
+    image: eshopping.serviceclient:${IMAGE_TAG:-latest} 
+    ports:
+      - "9055:8080"
+    volumes:
+      - physdata:/app/Data:rw
+    environment:
+      - PHYSICALFOLDER_LOCATION=/app/Data/
+    depends_on:
+      eshopping_client:
+        condition: service_started
+        
     
 networks:
   eshopping_net:
@@ -138,4 +174,7 @@ volumes:
       type: local
   redis_cachedata:
     name: "eshopping_redis_cachedata"
+    driver: local
+  jaegertracing_tmpdata:
+    name: "eshopping_jaegertracing_tmpdata"
     driver: local

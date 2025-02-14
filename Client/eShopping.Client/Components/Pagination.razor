@@ -1,4 +1,4 @@
-﻿<div class="pagination">
+﻿<div class="pagination" @attributes=InputAttributes>
     <ul class="paginationrow">
         @if (_startingPage < _minShowPageIndexesBefore)
         {
@@ -60,6 +60,8 @@
     public long MaxShowPageIndexesAfter { get; set; } = 5;
     [Parameter, EditorRequired]
     public EventCallback<long> OnClickChangePage { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
     #endregion Parameters
 
     private long _startingPage = 0;

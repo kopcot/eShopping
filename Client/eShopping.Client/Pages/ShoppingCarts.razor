@@ -20,7 +20,9 @@
 
         break;
     case PageTab.Single:
-        <eShopping.Client.Components.ShoppingCart.ShoppingCartItemsList ShoppingCartId=Id />
+        <CascadingValue Value="@this" Name="ShoppingCartsPage">
+            <eShopping.Client.Components.ShoppingCart.ShoppingCartItemsList ShoppingCartId=Id />
+        </CascadingValue>
         break;
     case PageTab.SingleItem:
         <h1>Shopping cart item</h1>

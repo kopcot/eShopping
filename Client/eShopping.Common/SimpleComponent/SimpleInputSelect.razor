@@ -1,0 +1,51 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@inherits InputSelect<string>
+
+<div class="@CssClass ">
+    <label>@Caption:</label>
+    <InputSelect @bind-Value=CurrentValue class="@cssClassInvalid" >
+        @if (AddEmptyValueOption)
+        {
+            <option value=@string.Empty>@string.Empty</option>
+        }
+        @foreach (var valueOption in ValueOptions)
+        {
+            <option value=@valueOption.Key>@valueOption.Value</option>
+        }
+    </InputSelect>
+    @if (ChildContent != null)
+    {
+        @ChildContent
+    }
+</div>
+@code {
+    [Parameter]
+    public new string CssClass { get; set; }
+
+    [Parameter]
+    public string Caption { get; set; } = "Caption";
+    [Parameter]
+    public bool AddEmptyValueOption { get; set; } = false;
+    [Parameter, EditorRequired]
+    public Dictionary<string, string> ValueOptions { get; set; }
+    [Parameter]
+    public List<FieldIdentifier> AdditionalValidationProperties { get; set; } = [];
+    [Parameter]
+    public string CssClassInvalid { get; set; }
+    private string cssClassInvalid
+    {
+        get
+        {
+            var isInvalid = EditContext.GetValidationMessages(base.FieldIdentifier).Any();
+            AdditionalValidationProperties.ForEach(va => isInvalid |= EditContext.GetValidationMessages(va).Any());
+            return isInvalid ? CssClassInvalid : string.Empty;
+        }
+    }
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        if (EditContext.IsModified(base.FieldIdentifier))
+            AdditionalValidationProperties.ForEach(va => EditContext.NotifyFieldChanged(va));
+    }
+}
+

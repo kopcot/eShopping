@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Shared.Infrastructure.Repositories
 {
-    public class BaseRepository<T> : IAsyncRepository<T> where T : BaseEntity
+    public abstract class BaseRepository<T> : IAsyncRepository<T> where T : BaseEntity
     {
         protected readonly DbContext _dbContext;
 
@@ -36,12 +36,27 @@ namespace Shared.Infrastructure.Repositories
         public async Task<IEnumerable<T>> GetAllAsync(Pagination? pagination = null, CancellationToken cancellationToken = default)
         {
             return await _dbSet
+                .Where(entity => !entity.IsDeleted)
                 .UsePagination(pagination)
                 .AsNoTracking()
-                .ToListAsync(cancellationToken);
-
+                .ToArrayAsync(cancellationToken);
+        }
+        public async Task<IEnumerable<T>> GetAllWithSoftDeletedAsync(Pagination? pagination = null, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .UsePagination(pagination)
+                .AsNoTracking()
+                .ToArrayAsync(cancellationToken);
         }
         public async Task<long> GetCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .Where(entity => !entity.IsDeleted)
+                .AsNoTracking()
+                //.Select(e => e.Id)
+                .LongCountAsync(cancellationToken);
+        }
+        public async Task<long> GetCountWithSoftDeletedAsync(CancellationToken cancellationToken = default)
         {
             return await _dbSet
                 .AsNoTracking()
@@ -63,9 +78,20 @@ namespace Shared.Infrastructure.Repositories
         public async Task<bool> DeleteByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _dbSet.FindAsync(id, cancellationToken);
-            if (entity == null) 
+            if (entity == null)
+                return false;
+            
+            _dbSet.Remove(entity);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        public async Task<bool> HardDeleteByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            var entity = await _dbSet.FindAsync(id, cancellationToken);
+            if (entity == null)
                 return false;
 
+            entity.IsHardDeleted = true;
             _dbSet.Remove(entity);
             await _dbContext.SaveChangesAsync(cancellationToken);
             return true;

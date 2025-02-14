@@ -1,0 +1,60 @@
+﻿/* styles.css */
+
+/* The Panel (background) */
+.panel {
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 100%;
+    overflow-x: hidden;
+    background-color: rgba(0,0,0,0.4);
+    transition: 0.5s;
+}
+.panel-visible {
+    width: 100% !important;
+}
+
+.panel-hidden {
+    width: 0 !important;
+}
+/* Panel Content */
+.panel-content {
+    width: fit-content;
+    min-width: 300px;
+    background-color: white;
+    height: 100%;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    transition: 0.5s;
+    float: right;
+}
+/* Panel Header */
+.panel-header {
+}
+/* Panel Body */
+.panel-body {
+    overflow: auto;
+}
+/* Panel Footer */
+.panel-footer {
+}
+
+/* Close Button */
+.close-btn {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    cursor: pointer;
+}
+
+    .close-btn:hover,
+    .close-btn:focus {
+        color: black;
+        text-decoration: none;
+    }

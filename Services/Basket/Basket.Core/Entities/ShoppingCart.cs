@@ -10,7 +10,9 @@ namespace Basket.Core.Entities
         [ForeignKey("ItemIds")]
         public virtual List<ShoppingCartItem> Items { get; set; }
         [NotMapped]
-        public virtual decimal TotalPrice => Items.Sum(x => x.IsDeleted ? 0 : x.Price * x.Quantity);
+        public decimal TotalPrice { get; set; }
+        //[NotMapped]
+        public int ItemCount { get; set; }
     }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 }

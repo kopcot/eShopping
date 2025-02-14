@@ -1,16 +1,16 @@
 #See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine-composite AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine-composite-amd64 AS base
 WORKDIR /app
 RUN apk update && apk add curl
 RUN rm -rf /var/cache/apk/*
-HEALTHCHECK --interval=5s --timeout=10s --retries=5 --start-period=30s \
+HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=30s \
   CMD curl -f http://localhost:8080/api/health || exit 1
 EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS restorer
 ARG BUILD_CONFIGURATION=Release
-ARG BUILD_PLATFORM=linux-arm64
+ARG BUILD_PLATFORM=linux-amd64
 ENV DOTNET_NUGET_SIGNATURE_VERIFICATION=false
 ENV DOTNET_USE_POLLING_FILE_WATCHER=false
 ENV NUGET_XMLDOC_MODE=skip

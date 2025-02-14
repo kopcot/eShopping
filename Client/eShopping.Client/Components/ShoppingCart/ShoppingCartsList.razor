@@ -1,4 +1,5 @@
 ﻿@using E = Basket.Core.Entities
+@using Basket.Core.Specs
 
 @if (shoppingCarts == null)
 {
@@ -12,7 +13,22 @@ else
         <option value=50>50</option>
         <option value=100>100</option>
     </InputSelect>
-    <div>
+    <InputSelect TValue=ShoppingCartSpecParams.SortingType Value=QuerySorting ValueExpression="(()=>QuerySorting)" ValueChanged="(async sort => await HandleSortingChangeAsync(sort))">
+        <option value=@ShoppingCartSpecParams.SortingType.NoSorting>@ShoppingCartSpecParams.SortingType.NoSorting.ToString()</option>
+        <optgroup label="Ascending">
+            <option value=@ShoppingCartSpecParams.SortingType.AscendingById>@ShoppingCartSpecParams.SortingType.AscendingById.ToString()</option>
+            <option value=@ShoppingCartSpecParams.SortingType.AscendingByUserName>@ShoppingCartSpecParams.SortingType.AscendingByUserName.ToString()</option>
+            <option value=@ShoppingCartSpecParams.SortingType.AscendingByItemCount>@ShoppingCartSpecParams.SortingType.AscendingByItemCount.ToString()</option>
+            <option value=@ShoppingCartSpecParams.SortingType.AscendingTotalPrice>@ShoppingCartSpecParams.SortingType.AscendingTotalPrice.ToString()</option>
+        </optgroup>
+        <optgroup label="Descending">
+            <option value=@ShoppingCartSpecParams.SortingType.DescendingById>@ShoppingCartSpecParams.SortingType.DescendingById.ToString()</option>
+            <option value=@ShoppingCartSpecParams.SortingType.DescendingByUserName>@ShoppingCartSpecParams.SortingType.DescendingByUserName.ToString()</option>
+            <option value=@ShoppingCartSpecParams.SortingType.DescendingByItemCount>@ShoppingCartSpecParams.SortingType.DescendingByItemCount.ToString()</option>
+            <option value=@ShoppingCartSpecParams.SortingType.DescendingTotalPrice>@ShoppingCartSpecParams.SortingType.DescendingTotalPrice.ToString()</option>
+        </optgroup>
+    </InputSelect>
+    <div @attributes=InputAttributes>
         <table class="productstable">
             <thead>
                 <tr class="productsrow">
@@ -21,6 +37,7 @@ else
                     <th class="productsrowdata">Items</th>
                     <th class="productsrowdata">TotalPrice</th>
                     <th class="productsrowdata">IsDeleted</th>
+                    <th class="productsrowdata">Delete</th>
                 </tr>
             </thead>
             <tbody>
@@ -29,12 +46,19 @@ else
                         @{
                             int id = singleShoppingCart.Id;
                         }
-                        <tr class="productsrow" @onclick="(_ => HandleRowClickShoppingCartsAsync(id))">
+                        <tr class="productsrow" @onclick="(_ => HandleRowClickShoppingCartsAsync(id))" >
                             <td class="productsrowdata">@singleShoppingCart.Id</td>
                             <td class="productsrowdata">@singleShoppingCart.UserName</td>
-                            <td class="productsrowdata">@singleShoppingCart.Items.Count</td>
+                            <td class="productsrowdata">@singleShoppingCart.ItemCount</td>
                             <td class="productsrowdata price">@singleShoppingCart.TotalPrice.ToString("0.00")</td>
                             <td class="productsrowdata">@singleShoppingCart.IsDeleted</td>
+                            <td class="productsrowdata">
+                                <span class="oi oi-trash"
+                                     @onclick:stopPropagation="true"
+                                     @onclick:preventDefault="true"
+                                     @onclick="(() => HandleRowClickDeleteShoppingCartsAsync(id))">
+                                </span>
+                            </td>
                         </tr>
                     </ItemContent>
                     <Placeholder>
@@ -50,5 +74,13 @@ else
                                                     OnClickChangePage=@(async (newPageIndex) => await HandlePageIndexChangeShoppingCartsAsync(newPageIndex)) />
             Shopping carts count = @shoppingCartsCount
         </div>
+    </div>
+    <div>
+        <eShopping.Common.Components.Modal Visible=deletingInProgress Title="Delete" OnClose="(visible) => deletingInProgress = visible">
+            <span>Deleting in progress...</span>
+        </eShopping.Common.Components.Modal>
+        <eShopping.Common.Components.Modal Visible=sortingInProgress Title="Sorting" OnClose="(visible) => sortingInProgress = visible">
+            <span>Sorting in progress...</span>
+        </eShopping.Common.Components.Modal>
     </div>
 }

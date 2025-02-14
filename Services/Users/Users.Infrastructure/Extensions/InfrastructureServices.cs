@@ -15,6 +15,7 @@ namespace Users.Infrastructure.Extensions
             string? connectionType,
             string? connectionStringDB,
             string? connectionStringRedis,
+            string? connectionStringOtlpExporter,
             TimeSpan? timeout = null)
         {
             // NOT GOOD-PRACTICE , should not be used
@@ -28,7 +29,10 @@ namespace Users.Infrastructure.Extensions
             serviceCollection.AddIpRateLimit();
             serviceCollection.AddRedisCache(connectionStringRedis, "Users.Infrastructure");
 
+            serviceCollection.AddOpenTelemetryService("Users.Infrastructure", new(connectionStringOtlpExporter));
+
             serviceCollection.AddScoped<IUserRepository, UserRepository>();
+            serviceCollection.AddScoped<IIpConnectionRepository, IpConnectionRepository>();
             serviceCollection.AddSingleton<IUserService, UserService>();
 
             serviceCollection.AddCookieAuthentication();

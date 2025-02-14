@@ -58,7 +58,7 @@ namespace Catalog.Infrastructure.Repositories
                 .Include(p => p.ImageFileDirectory)
                 .Where(p => p.Name == name)
                 .AsNoTracking()
-                .ToListAsync(cancellationToken);
+                .ToArrayAsync(cancellationToken);
         }
 
         public async Task<IEnumerable<Product>> GetByBrandNameAsync(string name, CancellationToken cancellationToken = default)
@@ -69,7 +69,7 @@ namespace Catalog.Infrastructure.Repositories
                 .Include(p => p.ImageFileDirectory)
                 .Where(p => p.Brand.Name == name)
                 .AsNoTracking()
-                .ToListAsync(cancellationToken);
+                .ToArrayAsync(cancellationToken);
         }
         public async Task<Product?> GetByBrandIdAsync(int id, CancellationToken cancellationToken = default)
         {
@@ -88,7 +88,7 @@ namespace Catalog.Infrastructure.Repositories
                 .Include(p => p.ImageFileDirectory)
                 .Where(p => p.Type.Name == name)
                 .AsNoTracking()
-                .ToListAsync(cancellationToken);
+                .ToArrayAsync(cancellationToken);
         }
 
         public async Task<Product?> GetByTypeIdAsync(int id, CancellationToken cancellationToken = default)
@@ -103,34 +103,37 @@ namespace Catalog.Infrastructure.Repositories
         public new async Task<IEnumerable<Product>> GetAllAsync(Pagination? pagination = null, CancellationToken cancellationToken = default)
         {
             return await _dbSet
+                .Where(entity => !entity.IsDeleted)
                 .Include(p => p.Brand)
                 .Include(p => p.Type)
                 .Include(p => p.ImageFileDirectory)
                 .UsePagination(pagination)
                 .AsNoTracking()
                 //.AsSplitQuery()
-                .ToListAsync(cancellationToken);
+                .ToArrayAsync(cancellationToken);
         }
 
         public async Task<long> GetCountAsync(ProductSpecParams? catalogSpecParam, CancellationToken cancellationToken = default)
         {
             return await _dbSet
-                .FilterProducts(catalogSpecParam)
+                .Where(entity => !entity.IsDeleted)
+                .Filter(catalogSpecParam)
                 .AsNoTracking()
                 .LongCountAsync(cancellationToken);
         }
         public async Task<IEnumerable<Product>> GetFilteredAsync(ProductSpecParams catalogSpecParam, Pagination? pagination = null, CancellationToken cancellationToken = default)
         {
             return await _dbSet
+                .Where(entity => !entity.IsDeleted)
                 .Include(p => p.Brand)
                 .Include(p => p.Type)
                 .Include(p => p.ImageFileDirectory)
-                .FilterProducts(catalogSpecParam)
-                .SortProducts(catalogSpecParam?.Sorting)
+                .Filter(catalogSpecParam)
+                .Sort(catalogSpecParam?.Sorting)
                 .UsePagination(pagination)
                 .AsNoTracking()
                 //.AsSplitQuery()
-                .ToListAsync(cancellationToken);
+                .ToArrayAsync(cancellationToken);
         }
     }
 }

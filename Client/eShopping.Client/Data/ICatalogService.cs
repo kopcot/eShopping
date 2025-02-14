@@ -4,13 +4,15 @@ using System.Net;
 
 namespace eShopping.Client.Data
 {
-    public interface ICatalogService
+    public interface ICatalogService 
     {
         Task<(bool, HttpStatusCode?, Exception?, IEnumerable<T>?)> GetProductsAsync<T>(CancellationToken? cancellationToken = null) where T : Product;
         Task<(bool, HttpStatusCode?, Exception?, IEnumerable<T>?)> GetProductByQueryAsync<T>(string queryString, CancellationToken? cancellationToken = null) where T : Product;
         Task<(bool, HttpStatusCode?, Exception?, long?)> GetProductCountAsync<T>(string queryString, CancellationToken? cancellationToken = null) where T : Product;
         Task<(bool, HttpStatusCode?, Exception?, T?)> GetProductByIdAsync<T>(int productId, CancellationToken? cancellationToken = null) where T : Product;
         Task<(bool, HttpStatusCode?, Exception?, T2?)> CreateProductAsync<T1, T2>(T1 product, CancellationToken? cancellationToken = null) where T1 : Product;
+        Task<(bool, HttpStatusCode?, Exception?, T2?)> CreateProductBrandAsync<T1, T2>(T1 productBrand, CancellationToken? cancellationToken = null) where T1 : ProductBrand;
+        Task<(bool, HttpStatusCode?, Exception?, T2?)> CreateProductTypeAsync<T1, T2>(T1 productType, CancellationToken? cancellationToken = null) where T1 : ProductType;
         Task<(bool, HttpStatusCode?, Exception?, IEnumerable<T>?)> GetProductBrandsAsync<T>(string queryString, CancellationToken? cancellationToken = null) where T : ProductBrand;
         Task<(bool, HttpStatusCode?, Exception?, IEnumerable<T>?)> GetProductTypesAsync<T>(string queryString, CancellationToken? cancellationToken = null) where T : ProductType;
         Task<(bool, HttpStatusCode?, Exception?, IEnumerable<T>?)> GetProductImageFoldersAsync<T>(string queryString, CancellationToken? cancellationToken = null) where T : ImageFileDirectory;

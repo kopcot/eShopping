@@ -1,9 +1,7 @@
-using Basket.Core.Entities;
-using eShopping.Client.Data;
+using Basket.Core.Specs;
+using Catalog.Core.Specs;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.WebUtilities;
-using Shared.Core.Specs;
-using System.Net;
+using OpenTelemetry.Trace;
 
 namespace eShopping.Client.Pages
 {
@@ -11,6 +9,8 @@ namespace eShopping.Client.Pages
     {
 
         public const string PagePathUrl = "/baskets";
+        [Inject]
+        public Tracer Tracer { get; set; }
         [Parameter]
         public int? Id { get; set; }
         [Parameter]
@@ -18,6 +18,8 @@ namespace eShopping.Client.Pages
         [Parameter]
         public string? PageAction { get; set; }
         #region Query parameters
+        public ShoppingCartSpecParams.SortingType QuerySortingShoppingCarts { get; set; } = ShoppingCartSpecParams.SortingType.NoSorting;
+        public ShoppingCartItemSpecParams.SortingType QuerySortingShoppingCartItems { get; set; } = ShoppingCartItemSpecParams.SortingType.NoSorting;
         [CascadingParameter]
         public int QueryProductCount { get; set; } = 10;
         [CascadingParameter]
@@ -28,10 +30,12 @@ namespace eShopping.Client.Pages
 
         protected override async Task OnInitializedAsync()
         {
+            using var span = Tracer.StartActiveSpan($"{nameof(ShoppingCarts)}_{nameof(OnInitializedAsync)}");
             await base.OnInitializedAsync();
         }
         protected override async Task OnParametersSetAsync()
         {
+            using var span = Tracer.StartActiveSpan($"{nameof(ShoppingCarts)}_{nameof(OnParametersSetAsync)}");
             CurrentTab = GetPageTab();
 
             await Task.CompletedTask;

@@ -19,6 +19,13 @@ namespace Basket.Infrastructure.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            //var tableSCI = this.Model.FindEntityType(typeof(ShoppingCartItem));
+            //var tableNameSCI = tableSCI.GetTableName();
+
+            modelBuilder.Entity<ShoppingCart>().Property(sc => sc.ItemCount).HasComputedColumnSql(
+                sql: $"SELECT SUM(Price * Quantity) FROM EShopping.ShoppingCartItems WHERE Id = ItemIds", 
+                stored: true);
         }
     }
 }

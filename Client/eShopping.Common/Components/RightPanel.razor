@@ -1,0 +1,31 @@
+﻿@if (Visible)
+{
+    <div id="rightPanel" class="panel @VisiblePanel" >
+        <div class="panel-content @VisiblePanelContent" @attributes=InputAttributes>
+            <div class="panel-header">
+                <h3>@Title</h3>
+                @if (HeadContent != null)
+                {
+                    @HeadContent
+                }
+                <span class="close-btn" onclick="@(() => OnCloseAction())">&times;</span>
+            </div>
+            <div class="panel-body @ChildContentCssStyle">
+                @if (ChildContent != null)
+                {
+                    @ChildContent
+                }
+                else
+                {
+                    <p>No content available.</p>
+                }
+            </div>
+            @if (FooterContent != null)
+            {
+                <div class="panel-footer @FooterContentCssStyle">
+                    @FooterContent
+                </div>
+            }
+        </div>
+    </div>
+}

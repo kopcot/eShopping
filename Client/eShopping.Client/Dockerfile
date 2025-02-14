@@ -1,6 +1,6 @@
 #See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine-composite AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine-composite-amd64 AS base
 WORKDIR /app
 RUN apk update && apk add curl
 RUN rm -rf /var/cache/apk/*
@@ -10,7 +10,7 @@ EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS restorer
 ARG BUILD_CONFIGURATION=Release
-ARG BUILD_PLATFORM=linux-arm64
+ARG BUILD_PLATFORM=linux-amd64
 ENV DOTNET_NUGET_SIGNATURE_VERIFICATION=false
 ENV DOTNET_USE_POLLING_FILE_WATCHER=false
 ENV NUGET_XMLDOC_MODE=skip
@@ -18,6 +18,7 @@ ENV NUGET_CERT_REVOCATION_MODE=offline
 RUN mkdir /src
 WORKDIR /src
 COPY ["Client/eShopping.Client/eShopping.Client.csproj", "./Client/eShopping.Client/"]
+COPY ["Client/eShopping.Common/eShopping.Common.csproj", "./Client/eShopping.Common/"]
 COPY ["Services/Basket/Basket.Core/Basket.Core.csproj", "./Services/Basket/Basket.Core/"]
 COPY ["Services/Catalog/Catalog.Core/Catalog.Core.csproj", "./Services/Catalog/Catalog.Core/"]
 COPY ["Services/Shared/Shared.Core/Shared.Core.csproj", "./Services/Shared/Shared.Core/"]
@@ -35,7 +36,8 @@ RUN \
 FROM restorer AS build
 WORKDIR /src
 #COPY . .
-COPY ./Client/ ./Client/
+COPY ./Client/eShopping.Client/ ./Client/eShopping.Client/
+COPY ./Client/eShopping.Common/ ./Client/eShopping.Common/
 COPY ./Services/Basket/Basket.Core/ ./Services/Basket/Basket.Core/
 COPY ./Services/Catalog/Catalog.Core/ ./Services/Catalog/Catalog.Core/
 COPY ./Services/Shared/Shared.Core/ ./Services/Shared/Shared.Core/

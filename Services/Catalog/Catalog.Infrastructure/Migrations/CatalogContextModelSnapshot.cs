@@ -35,6 +35,9 @@ namespace Catalog.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("IsHardDeleted")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime?>("Modified")
                         .HasColumnType("datetime(6)");
 
@@ -44,6 +47,9 @@ namespace Catalog.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Directory")
+                        .IsUnique();
+
+                    b.HasIndex("Id")
                         .IsUnique();
 
                     b.ToTable("ImageFileDirectories");
@@ -62,16 +68,19 @@ namespace Catalog.Infrastructure.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<int?>("ImageFileID")
+                        .IsRequired()
                         .HasColumnType("int");
 
                     b.Property<string>("ImageFileName")
                         .HasColumnType("longtext");
 
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsHardDeleted")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<DateTime?>("Modified")
@@ -88,7 +97,6 @@ namespace Catalog.Infrastructure.Migrations
                         .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("Summary")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<int>("TypeID")
@@ -97,6 +105,9 @@ namespace Catalog.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BrandID");
+
+                    b.HasIndex("Id")
+                        .IsUnique();
 
                     b.HasIndex("ImageFileID");
 
@@ -117,6 +128,9 @@ namespace Catalog.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("IsHardDeleted")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime?>("Modified")
                         .HasColumnType("datetime(6)");
 
@@ -128,6 +142,9 @@ namespace Catalog.Infrastructure.Migrations
                         .HasColumnType("varchar(255)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Id")
+                        .IsUnique();
 
                     b.HasIndex("Name")
                         .IsUnique();
@@ -147,6 +164,9 @@ namespace Catalog.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("IsHardDeleted")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime?>("Modified")
                         .HasColumnType("datetime(6)");
 
@@ -158,6 +178,9 @@ namespace Catalog.Infrastructure.Migrations
                         .HasColumnType("varchar(255)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Id")
+                        .IsUnique();
 
                     b.HasIndex("Name")
                         .IsUnique();
@@ -175,7 +198,9 @@ namespace Catalog.Infrastructure.Migrations
 
                     b.HasOne("Catalog.Core.Entities.ImageFileDirectory", "ImageFileDirectory")
                         .WithMany()
-                        .HasForeignKey("ImageFileID");
+                        .HasForeignKey("ImageFileID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Catalog.Core.Entities.ProductType", "Type")
                         .WithMany()

@@ -1,8 +1,19 @@
 ﻿@attribute [Route(PagePathUrl)]
+@inject OpenTelemetry.Trace.Tracer Tracer;
 
 <h3>Forbidden</h3>
 
 @code {
-
     public const string PagePathUrl = "/forbidden";
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var span = Tracer.StartActiveSpan($"{nameof(Forbidden)}_{nameof(OnInitializedAsync)}");
+        await base.OnInitializedAsync();
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        using var span = Tracer.StartActiveSpan($"{nameof(Forbidden)}_{nameof(OnParametersSetAsync)}");
+        await Task.CompletedTask;
+    }
 }

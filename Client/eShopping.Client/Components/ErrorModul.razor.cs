@@ -8,6 +8,8 @@ namespace eShopping.Client.Components
     {
         [Inject]
         private IErrorService ErrorService { get; set; }
+        [Parameter(CaptureUnmatchedValues = true)]
+        public Dictionary<string, object>? InputAttributes { get; set; }
         private long errorsBefore = 0;
         private IEnumerable<ErrorData> Errors = new List<ErrorData>();
         private bool disposedValue;

@@ -19,6 +19,47 @@ namespace Users.Infrastructure.Migrations
                 .HasAnnotation("ProductVersion", "8.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
+            modelBuilder.Entity("Users.Core.Entities.IpConnection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("Created")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsHardDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("Modified")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<uint?>("ModifiedCount")
+                        .HasColumnType("int unsigned");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Id")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("IpConnection");
+                });
+
             modelBuilder.Entity("Users.Core.Entities.User", b =>
                 {
                     b.Property<int>("Id")
@@ -35,6 +76,9 @@ namespace Users.Infrastructure.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsHardDeleted")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<DateTime?>("Modified")
@@ -56,10 +100,25 @@ namespace Users.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Id")
+                        .IsUnique();
+
                     b.HasIndex("Name")
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Users.Core.Entities.IpConnection", b =>
+                {
+                    b.HasOne("Users.Core.Entities.User", null)
+                        .WithMany("IpConnections")
+                        .HasForeignKey("UserId");
+                });
+
+            modelBuilder.Entity("Users.Core.Entities.User", b =>
+                {
+                    b.Navigation("IpConnections");
                 });
 #pragma warning restore 612, 618
         }

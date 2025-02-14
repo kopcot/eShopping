@@ -20,12 +20,12 @@
         break;
     case PageTab.Single:
         <h1>Product data</h1>
-        <eShopping.Client.Components.Product.ProductDetail ProductId=Id />
+        <eShopping.Client.Components.Product.ProductDetail ProductId=@Id />
         break;
 
     case PageTab.CreateNew:
         <h1>Create a new product data</h1>
-        <eShopping.Client.Components.Product.ProductCreate PagePathUrl=PagePathUrl />
+        <eShopping.Client.Components.Product.ProductCreate PagePathUrl=@PagePathUrl />
         break;
     default:
         <PageNotFound />

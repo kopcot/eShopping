@@ -1,21 +1,30 @@
-﻿using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using AspNetCoreRateLimit;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Shared.Infrastructure.HealthCheck;
-using Shared.Infrastructure.Security;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Shared.Infrastructure.Data;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
-using AspNetCoreRateLimit;
-using System.Net;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Shared.Infrastructure.Data;
+using Shared.Infrastructure.HealthCheck;
+using Shared.Infrastructure.Security;
 using StackExchange.Redis;
-using System.Configuration;
+using System.Net;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.FileProviders;
+using OpenTelemetry.Instrumentation.AspNetCore;
+using Google.Protobuf.WellKnownTypes;
 
 namespace Shared.Infrastructure.Extensions
 {
@@ -112,25 +121,23 @@ namespace Shared.Infrastructure.Extensions
                 options.HttpStatusCode = (int)HttpStatusCode.TooManyRequests;
                 options.RealIpHeader = "X-Real-IP";
                 options.ClientIdHeader = "X-ClientId";
-                options.GeneralRules =
-                [
-                    new RateLimitRule
-                    {
-                        Endpoint = "*",
-                        //Period = "10s",
-                        PeriodTimespan = TimeSpan.FromSeconds(10),
-                        Limit = 25,
-                        MonitorMode = false
-                    },
-                    new RateLimitRule
-                    {
+                options.GeneralRules = new ()
+                {
+                    new() {
                         Endpoint = "*",
                         //Period = "1s",
                         PeriodTimespan = TimeSpan.FromSeconds(1),
                         Limit = 5,
                         MonitorMode = true,
                     },
-                ];
+                    new() {
+                        Endpoint = "*",
+                        //Period = "10s",
+                        PeriodTimespan = TimeSpan.FromSeconds(10),
+                        Limit = 25,
+                        MonitorMode = false
+                    },
+                };
 
             });
 
@@ -180,7 +187,10 @@ namespace Shared.Infrastructure.Extensions
         {
             ArgumentNullException.ThrowIfNull(redisConnectionString);
 
-            IConnectionMultiplexer connectionMultiplexer = ConnectionMultiplexer.Connect(redisConnectionString);
+            var options = ConfigurationOptions.Parse(redisConnectionString);
+            options.AllowAdmin = true;
+
+            IConnectionMultiplexer connectionMultiplexer = ConnectionMultiplexer.Connect(options);
             serviceCollection.AddSingleton(connectionMultiplexer);
 
             serviceCollection.AddStackExchangeRedisCache(option =>
@@ -195,8 +205,50 @@ namespace Shared.Infrastructure.Extensions
             });
             serviceCollection.AddSingleton<IRedisCache, RedisCache>(option => 
                 new (option.GetRequiredService<IDistributedCache>(), 
+                     instanceName,
                      TimeSpan.FromMinutes(5),
-                     option.GetRequiredService<IConnectionMultiplexer>()));
+                     option.GetRequiredService<IConnectionMultiplexer>(), 
+                     option.GetRequiredService<Tracer>()));
+        }
+
+        public static void AddOpenTelemetryService(this IServiceCollection serviceCollection, string instanceName, string? otlpExporterConnectionString)
+        {
+            ArgumentNullException.ThrowIfNull(otlpExporterConnectionString);
+
+            serviceCollection
+                .AddOpenTelemetry()
+                .UseOtlpExporter(OtlpExportProtocol.HttpProtobuf, new(otlpExporterConnectionString))
+                .ConfigureResource(resource => resource.AddService(
+                    serviceName: instanceName,
+                    serviceInstanceId: Environment.MachineName
+                    ))
+                .WithTracing(tracing =>
+                {
+                    tracing
+                        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(instanceName))
+                        .SetSampler(new AlwaysOnSampler())
+                        .AddSource(instanceName)
+                        // Metrics provides by ASP.NET Core in .NET 8
+                        .AddSource("Microsoft.AspNetCore")
+                        .AddSource("Microsoft.AspNetCore.Hosting")
+                        .AddSource("Microsoft.AspNetCore.Server.Kestrel")
+                        //.AddSource("System.Net.Http.HttpClient.health-checks")
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddEntityFrameworkCoreInstrumentation()
+                        .AddRedisInstrumentation()
+                        .AddConnectorNet();
+                })
+                .WithMetrics(metrics =>
+                {
+                    metrics
+                        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(instanceName))
+                        .AddRuntimeInstrumentation()
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation();
+                });
+
+            serviceCollection.AddSingleton(TracerProvider.Default.GetTracer(instanceName));
         }
     }
 }

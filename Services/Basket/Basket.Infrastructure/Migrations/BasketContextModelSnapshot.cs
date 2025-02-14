@@ -31,6 +31,14 @@ namespace Basket.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("IsHardDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("ItemCount")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("int")
+                        .HasComputedColumnSql("SELECT SUM(Price * Quantity) FROM EShopping.ShoppingCartItems WHERE Id = ItemIds", true);
+
                     b.Property<DateTime?>("Modified")
                         .HasColumnType("datetime(6)");
 
@@ -42,6 +50,9 @@ namespace Basket.Infrastructure.Migrations
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Id")
+                        .IsUnique();
 
                     b.ToTable("ShoppingCarts");
                 });
@@ -59,6 +70,9 @@ namespace Basket.Infrastructure.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsHardDeleted")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<int?>("ItemIds")
@@ -81,6 +95,9 @@ namespace Basket.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Id")
+                        .IsUnique();
 
                     b.HasIndex("ItemIds");
 

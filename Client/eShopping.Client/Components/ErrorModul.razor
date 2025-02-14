@@ -2,8 +2,8 @@
 @using eShopping.Client.Entities
 
 @if (Errors.Any())
-{ 
-    <div style="border:solid 5px orange">
+{
+    <div style="border:solid 5px orange" @attributes=InputAttributes>
         <div style="max-height:200px;overflow-y:scroll">
             @foreach(var singleError in Errors)
             {
@@ -40,7 +40,7 @@
                             <br>
                         }
                     </p>
-                    <button @onclick="(async () => await HandleAcceptErrorButtonAsync(errorData))">
+                    <button @onclick="(async () => await HandleAcceptErrorButtonAsync(errorData))" style="max-height:50px">
                         Accept
                     </button>
                 </div>

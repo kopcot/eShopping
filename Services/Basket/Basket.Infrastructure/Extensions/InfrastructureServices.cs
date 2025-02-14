@@ -15,6 +15,7 @@ namespace Basket.Infrastructure.Extensions
             string? connectionType,
             string? connectionStringDB,
             string? connectionStringRedis,
+            string? connectionStringOtlpExporter,
             TimeSpan? timeout = null)
         {
             // NOT GOOD-PRACTICE , should not be used
@@ -27,6 +28,8 @@ namespace Basket.Infrastructure.Extensions
 
             serviceCollection.AddIpRateLimit();
             serviceCollection.AddRedisCache(connectionStringRedis, "Basket.Infrastructure");
+
+            serviceCollection.AddOpenTelemetryService("Basket.Infrastructure", new(connectionStringOtlpExporter));
 
             serviceCollection.AddScoped<IShoppingCartRepository, ShoppingCartRepository>();
             serviceCollection.AddScoped<IShoppingCartItemRepository, ShoppingCartItemRepository>();

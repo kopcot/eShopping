@@ -15,7 +15,7 @@ namespace Catalog.Infrastructure.Repositories
 
         public async Task<IEnumerable<ProductType>> GetByNameAsync(string name, CancellationToken cancellationToken = default)
         {
-            return await _dbSet.Where(pb => pb.Name == name).ToListAsync(cancellationToken);
+            return await _dbSet.Where(pb => pb.Name == name).ToArrayAsync(cancellationToken);
         }
     }
 }

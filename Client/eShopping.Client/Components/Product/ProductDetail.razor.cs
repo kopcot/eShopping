@@ -1,7 +1,6 @@
 using eShopping.Client.Data;
-using eShopping.Client.Pages;
 using Microsoft.AspNetCore.Components;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using OpenTelemetry.Trace;
 using System.Net;
 using E = Catalog.Core.Entities;
 
@@ -15,6 +14,10 @@ namespace eShopping.Client.Components.Product
         private NavigationManager Navigation { get; set; }
         [Inject]
         private IErrorService ErrorService { get; set; }
+        [Inject]
+        public Tracer Tracer { get; set; }
+        [Parameter(CaptureUnmatchedValues = true)]
+        public Dictionary<string, object>? InputAttributes { get; set; }
         [Parameter, EditorRequired]
         public int? ProductId { get; set; }
 
@@ -22,19 +25,25 @@ namespace eShopping.Client.Components.Product
         private bool disposedValue;
         protected override async Task OnInitializedAsync()
         {
-            await base.OnInitializedAsync();
+            using (var span = Tracer.StartActiveSpan($"{nameof(ProductDetail)}_{nameof(OnInitializedAsync)}"))
+            {
+                await base.OnInitializedAsync();
+            };
         }
         protected override async Task OnParametersSetAsync()
         {
-            HttpStatusCode? httpStatusCode;
-            bool result;
-            Exception? exception;
-
-            if (ProductId is not null)
+            using (var span = Tracer.StartActiveSpan($"{nameof(ProductDetail)}_{nameof(OnParametersSetAsync)}"))
             {
-                (result, httpStatusCode, exception, Product) = await CatalogService.GetProductByIdAsync<E.Product>((int)ProductId);
-                await ErrorService.AddSmartErrorAsync(!result, Navigation.Uri, httpStatusCode, exception, null);
-            }
+                HttpStatusCode? httpStatusCode;
+                bool result;
+                Exception? exception;
+
+                if (ProductId is not null)
+                {
+                    (result, httpStatusCode, exception, Product) = await CatalogService.GetProductByIdAsync<E.Product>((int)ProductId);
+                    await ErrorService.AddSmartErrorAsync(!result, Navigation.Uri, httpStatusCode, exception, null);
+                }
+            };
         }
         #region Dispose
         protected virtual void Dispose(bool disposing)

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0.2-alpine3.19-composite-arm64v8 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0.2-alpine3.19-composite AS base
 WORKDIR /app
 RUN apk update && apk add curl
 RUN rm -rf /var/cache/apk/*
@@ -7,9 +7,9 @@ HEALTHCHECK --interval=5s --timeout=10s --retries=5 --start-period=30s \
 EXPOSE 8080
 
 # RESTORE
-FROM mcr.microsoft.com/dotnet/sdk:8.0.201-alpine3.19-arm64v8 AS restorer
+FROM mcr.microsoft.com/dotnet/sdk:8.0.201-alpine3.19 AS restorer
 ARG BUILD_CONFIGURATION=Release
-ARG BUILD_PLATFORM=linux-arm64
+ARG BUILD_PLATFORM=linux-amd64
 ENV DOTNET_NUGET_SIGNATURE_VERIFICATION=false
 ENV DOTNET_USE_POLLING_FILE_WATCHER=false
 ENV NUGET_XMLDOC_MODE=skip

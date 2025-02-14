@@ -1,11 +1,12 @@
 ﻿using Basket.Core.Entities;
+using Basket.Core.Specs;
 using Basket.Infrastructure.Repositories;
 using Basket.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OutputCaching;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
+using OpenTelemetry.Trace;
 using Shared.Api.Controllers;
+using Shared.Core.Responses;
 using Shared.Core.Specs;
 using Shared.Infrastructure.Data;
 using System.Net;
@@ -22,7 +23,8 @@ namespace Basket.API.Controllers
             IShoppingCartItemRepository shoppingCartItemRepository,
             IRedisCache redisCache,
             IUserService userService,
-            ILogger<BasketController> logger) : base(userService, logger)
+            ILogger<BasketController> logger, 
+            Tracer tracer) : base(userService, logger, tracer)
         {
             _shoppingCartRepository = shoppingCartRepository;
             _shoppingCartItemRepository = shoppingCartItemRepository;
@@ -34,8 +36,10 @@ namespace Basket.API.Controllers
         [Route(nameof(ShoppingCart))]
         //[OutputCache] //slowed down results on NAS
         [ProducesResponseType(typeof(IEnumerable<ShoppingCart>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<ShoppingCart>>> GetAllShoppingCartsAsync([FromQuery] Pagination? pagination, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<IEnumerable<ShoppingCart>>> GetAllShoppingCartsAsync([FromQuery] Pagination? pagination, [FromQuery] ShoppingCartSpecParams catalogSpecParam, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetAllShoppingCartsAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -44,19 +48,27 @@ namespace Basket.API.Controllers
             if (isCached)
                 return Ok(shoppingCarts);
 
-            shoppingCarts = await _shoppingCartRepository.GetAllAsync(pagination, cancellationToken);
+            shoppingCarts = await _shoppingCartRepository.GetFilteredAsync(catalogSpecParam, pagination, cancellationToken);
             _logger.LogInformation($"User = {user}. Return {shoppingCarts.Count()} shopping carts");
 
+            foreach (var shoppingCart in shoppingCarts)
+            {
+                FillCountAndTotalPrice(shoppingCart);
+                shoppingCart.Items = [];
+            }
             await _redisCache.StoreRedisCacheData(HttpContext, shoppingCarts, cancellationToken);
             return Ok(shoppingCarts);
         }
         [HttpGet]
+        [AllowAnonymous]
         [Route(nameof(ShoppingCart) + "/{id}")]
         //[OutputCache] //slowed down results on NAS
         [ProducesResponseType(typeof(ShoppingCart), (int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<ActionResult<ShoppingCart?>> GetShoppingCartByIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ShoppingCart?>> GetShoppingCartByIdAsync([FromRoute]int id, [FromQuery] ShoppingCartItemSpecParams catalogSpecParam, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetShoppingCartByIdAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -66,31 +78,37 @@ namespace Basket.API.Controllers
                 return Ok(shoppingCart);
 
             _logger.LogInformation($"User = {user}. Return shopping cart with id = {id}");
-            shoppingCart = await _shoppingCartRepository.GetByIdAsync(id, cancellationToken);
+            shoppingCart = await _shoppingCartRepository.GetByIdAsync(id, catalogSpecParam, cancellationToken);
             _logger.LogInformation($"User = {user}. Return shopping cart exists: {shoppingCart is not null}");
+
+            FillCountAndTotalPrice(shoppingCart);
 
             await _redisCache.StoreRedisCacheData(HttpContext, shoppingCart, cancellationToken);
             return shoppingCart is null ? NotFound() : Ok(shoppingCart);
         }
+
+
         [HttpGet]
         [Route(nameof(ShoppingCart) + "/count")]
         //[OutputCache] //slowed down results on NAS
-        [ProducesResponseType(typeof(long), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<long>> GetCountShoppingCartsAsync(CancellationToken cancellationToken = default)
+        [ProducesResponseType(typeof(ApiResponse<long>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<ApiResponse<long>>> GetCountShoppingCartsAsync(CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetCountShoppingCartsAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
 
             (var isCached, var count) = await _redisCache.GetRedisCacheDataAsync<long>(HttpContext, cancellationToken);
             if (isCached)
-                return Ok(count);
+                return Ok(ApiResponse<long>.CreateApiResponse(count, user));
 
             count = await _shoppingCartRepository.GetCountAsync(cancellationToken);
             _logger.LogInformation($"User = {user}. Return count of shopping carts");
 
             await _redisCache.StoreRedisCacheData(HttpContext, count, cancellationToken);
-            return Ok(count);
+            return Ok(ApiResponse<long>.CreateApiResponse(count, user));
         }
 
         [HttpPut]
@@ -98,15 +116,17 @@ namespace Basket.API.Controllers
         [ProducesResponseType(typeof(ShoppingCart), (int)HttpStatusCode.Created)]
         public async Task<ActionResult<ShoppingCart>> CreateShoppingCartAsync(ShoppingCart shoppingCart, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(CreateShoppingCartAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
 
-            await _shoppingCartRepository.AddAsync(shoppingCart, cancellationToken);
+            var created = await _shoppingCartRepository.AddAsync(shoppingCart, cancellationToken);
             _logger.LogInformation($"User = {user}. Create shopping cart, id : {shoppingCart.Id}");
 
             await _redisCache.StoreRedisCacheData(HttpContext, shoppingCart, cancellationToken);
-            return Created(string.Empty, shoppingCart);
+            return created ? Created(string.Empty, shoppingCart) : BadRequest();
         }
         [HttpDelete]
         [Route(nameof(ShoppingCart) + "/{id}")]
@@ -114,6 +134,8 @@ namespace Basket.API.Controllers
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<ActionResult<bool>> RemoveShoppingCartTypeAsync(int id, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(RemoveShoppingCartTypeAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -121,8 +143,17 @@ namespace Basket.API.Controllers
             var deleted = await _shoppingCartRepository.DeleteByIdAsync(id, cancellationToken);
             _logger.LogInformation($"User = {user}. Deleted shopping cart, id : {id}");
 
-            await _redisCache.RemoveRedisCacheDataAsync(HttpContext, cancellationToken);
+            await _redisCache.RemoveRedisCacheDataAsync(cancellationToken);
             return deleted ? Ok(deleted) : NotFound();
+        }
+
+        private static void FillCountAndTotalPrice(ShoppingCart? shoppingCart)
+        {
+            if (shoppingCart != null)
+            {
+                shoppingCart.TotalPrice = shoppingCart.Items.Sum(sci => sci.IsDeleted ? 0 : sci.Price * sci.Quantity);
+                shoppingCart.ItemCount = shoppingCart.Items.Count;
+            }
         }
         #endregion
 
@@ -131,8 +162,10 @@ namespace Basket.API.Controllers
         [Route(nameof(ShoppingCartItem))]
         //[OutputCache] //slowed down results on NAS
         [ProducesResponseType(typeof(IEnumerable<ShoppingCartItem>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<ShoppingCartItem>>> GetAllShoppingCartItemsAsync([FromQuery] Pagination? pagination, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<IEnumerable<ShoppingCartItem>>> GetAllShoppingCartItemsAsync([FromQuery] Pagination? pagination, [FromQuery] ShoppingCartItemSpecParams catalogSpecParam, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetAllShoppingCartItemsAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -141,7 +174,7 @@ namespace Basket.API.Controllers
             if (isCached)
                 return Ok(shoppingCartItems);
 
-            shoppingCartItems = await _shoppingCartItemRepository.GetAllAsync(pagination, cancellationToken);
+            shoppingCartItems = await _shoppingCartItemRepository.GetFilteredAsync(catalogSpecParam, pagination, cancellationToken);
             _logger.LogInformation($"User = {user}. Return {shoppingCartItems.Count()} shopping carts items");
 
             await _redisCache.StoreRedisCacheData(HttpContext, shoppingCartItems, cancellationToken);
@@ -154,6 +187,8 @@ namespace Basket.API.Controllers
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<ActionResult<ShoppingCartItem>> GetAllShoppingCartItemByIdAsync(int id, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetAllShoppingCartItemByIdAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -176,6 +211,8 @@ namespace Basket.API.Controllers
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<ActionResult<long>> GetShoppingCartItemByIdsAsync(int shoppingCartId, int shoppingCartItemId, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetShoppingCartItemByIdsAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -192,11 +229,13 @@ namespace Basket.API.Controllers
             return shoppingCartItem is null ? NotFound() : Ok(shoppingCartItem);
         }
         [HttpGet]
-        [Route(nameof(ShoppingCartItem) + "/count")]
+        [Route(nameof(ShoppingCartItem) + "/{id}/count")]
         //[OutputCache] //slowed down results on NAS
         [ProducesResponseType(typeof(long), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<long>> GetCountShoppingCartItemsAsync(CancellationToken cancellationToken = default)
+        public async Task<ActionResult<long>> GetCountShoppingCartItemsAsync(int id, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetCountShoppingCartItemsAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -205,7 +244,7 @@ namespace Basket.API.Controllers
             if (isCached)
                 return Ok(count);
 
-            count = await _shoppingCartItemRepository.GetCountAsync();
+            count = await _shoppingCartItemRepository.GetCountAsync(id);
             _logger.LogInformation($"User = {user}. Return count of shopping carts items");
 
             await _redisCache.StoreRedisCacheData(HttpContext, count, cancellationToken);
@@ -217,6 +256,8 @@ namespace Basket.API.Controllers
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<ActionResult<bool>> RemoveProductTypeAsync(int id, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(RemoveProductTypeAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -224,7 +265,7 @@ namespace Basket.API.Controllers
             var deleted = await _shoppingCartItemRepository.DeleteByIdAsync(id, cancellationToken);
             _logger.LogInformation($"User = {user}. Deleted shopping cart item, id : {id}");
 
-            await _redisCache.RemoveRedisCacheDataAsync(HttpContext, cancellationToken);
+            await _redisCache.RemoveRedisCacheDataAsync(cancellationToken);
             return deleted ? Ok(deleted) : NotFound();
         }
         #endregion

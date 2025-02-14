@@ -11,7 +11,8 @@ namespace Shared.Infrastructure.Data
     {
         Task<(bool, T?)> GetRedisCacheDataAsync<T>(HttpContext context, CancellationToken cancellationToken = default); 
         Task StoreRedisCacheData<T>(HttpContext context, T value, CancellationToken cancellationToken = default);
-        Task RemoveRedisCacheDataAsync(HttpContext context, CancellationToken cancellationToken = default);
+        Task RemoveRedisCacheDataAsync(CancellationToken cancellationToken = default);
         Task RefreshRedisCacheDataAsync(HttpContext context, CancellationToken cancellationToken = default);
+        Task FlushDatabaseAsync(CancellationToken cancellationToken = default);
     }
 }

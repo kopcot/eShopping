@@ -1,0 +1,46 @@
+﻿@attribute [Route(PagePathUrl)]
+@attribute [AllowAnonymous]
+@inject OpenTelemetry.Trace.Tracer Tracer
+
+<h3>CreateUser</h3>
+
+<form action="user/create" method="post">
+    <div class="productdata" style="display:table">
+        <div class="productrowdata">
+            <label asp-for="username">name</label>
+            <input asp-for="username" type="text" name="username" />
+            <span asp-validation-for="username" class="text-danger"></span>
+        </div>
+        <div class="productrowdata">
+            <label asp-for="password">password</label>
+            <input asp-for="password" type=@passwordType name="password" />
+            <span asp-validation-for="password" class="text-danger"></span>
+            <InputCheckbox @bind-Value=showPassword />
+        </div>
+        <div class="productrowdata">
+            <label asp-for="email">email</label>
+            <input asp-for="email" type="text" name="email" />
+            <span asp-validation-for="email" class="text-danger"></span>
+        </div>
+        <button type="submit" >Create</button>
+    </div>
+</form>
+
+@code {
+    public const string PagePathUrl = "/createuser";
+    private bool showPassword { get; set; }
+    private string passwordType => showPassword ? "text" : "password";
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var span = Tracer.StartActiveSpan($"{nameof(CreateUser)}_{nameof(OnInitializedAsync)}");
+        await base.OnInitializedAsync();
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        using var span = Tracer.StartActiveSpan($"{nameof(CreateUser)}_{nameof(OnParametersSetAsync)}");
+
+        await Task.CompletedTask;
+    }
+
+}

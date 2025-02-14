@@ -15,6 +15,7 @@ namespace Catalog.Infrastructure.Extensions
             string? connectionType,
             string? connectionStringDB,
             string? connectionStringRedis,
+            string? connectionStringOtlpExporter,
             TimeSpan? timeout = null)
         {
             // NOT GOOD-PRACTICE , should not be used
@@ -27,6 +28,8 @@ namespace Catalog.Infrastructure.Extensions
 
             serviceCollection.AddIpRateLimit();
             serviceCollection.AddRedisCache(connectionStringRedis, "Catalog.Infrastructure");
+
+            serviceCollection.AddOpenTelemetryService("Catalog.Infrastructure", new(connectionStringOtlpExporter));
 
             serviceCollection.AddScoped<IProductRepository, ProductRepository>();
             serviceCollection.AddScoped<IProductTypeRepository, ProductTypeRepository>();

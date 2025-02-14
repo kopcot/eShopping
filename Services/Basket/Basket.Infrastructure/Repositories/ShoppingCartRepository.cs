@@ -1,11 +1,11 @@
 ﻿using Basket.Core.Entities;
+using Basket.Core.Specs;
 using Basket.Infrastructure.Data;
+using Basket.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Shared.Core.Specs;
-using Shared.Infrastructure.Repositories;
 using Shared.Infrastructure.Extensions;
-using System.Linq;
-using Microsoft.EntityFrameworkCore.Query;
+using Shared.Infrastructure.Repositories;
 
 
 namespace Basket.Infrastructure.Repositories
@@ -34,27 +34,45 @@ namespace Basket.Infrastructure.Repositories
             await _dbContext.SaveChangesAsync(cancellationToken);
             return true;
         }
-        public new async Task<ShoppingCart?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<ShoppingCart?> GetByIdAsync(int id, ShoppingCartItemSpecParams? catalogSpecParam = null, CancellationToken cancellationToken = default)
         {
-            return await _dbSet
-                .Include(sc => sc.Items)
+            var shoppingCart = await _dbSet
+                .Include(sc => sc.Items.Where(sci => !sci.IsDeleted))
                 .SingleOrDefaultAsync(sc => sc.Id == id, cancellationToken);
+
+            if (shoppingCart != null)
+                shoppingCart.Items = shoppingCart.Items.AsQueryable().Sort(catalogSpecParam?.Sorting).ToList();
+
+            return shoppingCart;
         }
         public async Task<IEnumerable<ShoppingCart>> GetByUserNameAsync(string name, CancellationToken cancellationToken = default)
         {
             return await _dbSet
-                .Include(sc => sc.Items)
+                .Include(sc => sc.Items.Where(sci => !sci.IsDeleted))
                 .Where(sc => sc.UserName == name)
-                .ToListAsync(cancellationToken);
+                .ToArrayAsync(cancellationToken);
         }
         public new async Task<IEnumerable<ShoppingCart>> GetAllAsync(Pagination? pagination = null, CancellationToken cancellationToken = default)
         {
             return await _dbSet
+                .Where(entity => !entity.IsDeleted)
+                .Include(sc => sc.Items.Where(sci => !sci.IsDeleted))
                 .UsePagination(pagination)
-                .Include(sc => sc.Items)
                 .AsNoTracking()
                 //.AsSplitQuery()
-                .ToListAsync(cancellationToken); 
+                .ToArrayAsync(cancellationToken);
+        }
+        public async Task<IEnumerable<ShoppingCart>> GetFilteredAsync(ShoppingCartSpecParams catalogSpecParam, Pagination? pagination = null, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .Where(entity => !entity.IsDeleted)
+                .Include(sc => sc.Items.Where(sci => !sci.IsDeleted))
+                .Filter(catalogSpecParam)
+                .Sort(catalogSpecParam?.Sorting)
+                .UsePagination(pagination)
+                .AsNoTracking()
+                //.AsSplitQuery()
+                .ToArrayAsync(cancellationToken);
         }
         public new async Task<bool> DeleteByIdAsync(int id, CancellationToken cancellationToken = default)
         {

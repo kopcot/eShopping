@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Trace;
 using Shared.Infrastructure.Security;
 using System.Net;
 
@@ -15,12 +16,14 @@ namespace Shared.Api.Controllers
     {
         protected readonly ILogger _logger;
         protected readonly IBaseSecurity _baseSecurity;
+        protected readonly Tracer _tracer;
         private bool disposedValue;
 
-        public ApiAuthorizeController(IBaseSecurity baseSecurity, ILogger logger)
+        public ApiAuthorizeController(IBaseSecurity baseSecurity, ILogger logger, Tracer tracer)
         {
             _baseSecurity = baseSecurity;
             _logger = logger;
+            _tracer = tracer;
         }
 
         [Route("{**catchAll}")]
@@ -35,6 +38,7 @@ namespace Shared.Api.Controllers
         [ProducesResponseType(typeof(Exception), (int)HttpStatusCode.NotFound)]
         public async Task<ActionResult<string>> CatchAllAsync(string catchAll)
         {
+            using var span = _tracer.StartActiveSpan(nameof(CatchAllAsync));
             ProblemDetails problemDetails = new()
             {
                 Status = StatusCodes.Status404NotFound,
@@ -53,7 +57,7 @@ namespace Shared.Api.Controllers
                 {
                     // TODO: dispose managed state (managed objects)
                 }
-        
+
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
                 // TODO: set large fields to null
                 disposedValue = true;

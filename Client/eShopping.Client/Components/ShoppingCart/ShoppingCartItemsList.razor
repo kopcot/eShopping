@@ -1,4 +1,5 @@
 ﻿@using E = Basket.Core.Entities
+@using Basket.Core.Specs
 
 @if (shoppingCart == null)
 {
@@ -6,7 +7,26 @@
 }
 else
 {
-    <div class="productdata">
+    <InputSelect TValue=ShoppingCartItemSpecParams.SortingType Value=QuerySorting ValueExpression="(()=>QuerySorting)" ValueChanged="(async sort => await HandleSortingChangeAsync(sort))">
+        <option value=@ShoppingCartItemSpecParams.SortingType.NoSorting>@ShoppingCartItemSpecParams.SortingType.NoSorting.ToString()</option>
+        <optgroup label="Ascending">
+            <option value=@ShoppingCartItemSpecParams.SortingType.AscendingById>@ShoppingCartItemSpecParams.SortingType.AscendingById.ToString()</option>
+            <option value=@ShoppingCartItemSpecParams.SortingType.AscendingByProductName>@ShoppingCartItemSpecParams.SortingType.AscendingByProductName.ToString()</option>
+            <option value=@ShoppingCartItemSpecParams.SortingType.AscendingByQuantity>@ShoppingCartItemSpecParams.SortingType.AscendingByQuantity.ToString()</option>
+            <option value=@ShoppingCartItemSpecParams.SortingType.AscendingPrice>@ShoppingCartItemSpecParams.SortingType.AscendingPrice.ToString()</option>
+            <option value=@ShoppingCartItemSpecParams.SortingType.AscendingTotalPrice>@ShoppingCartItemSpecParams.SortingType.AscendingTotalPrice.ToString()</option>
+            <option value=@ShoppingCartItemSpecParams.SortingType.AscendingImageFile>@ShoppingCartItemSpecParams.SortingType.AscendingImageFile.ToString()</option>
+        </optgroup>
+        <optgroup label="Descending">
+            <option value=@ShoppingCartItemSpecParams.SortingType.DescendingById>@ShoppingCartItemSpecParams.SortingType.DescendingById.ToString()</option>
+            <option value=@ShoppingCartItemSpecParams.SortingType.DescendingByProductName>@ShoppingCartItemSpecParams.SortingType.DescendingByProductName.ToString()</option>
+            <option value=@ShoppingCartItemSpecParams.SortingType.DescendingByQuantity>@ShoppingCartItemSpecParams.SortingType.DescendingByQuantity.ToString()</option>
+            <option value=@ShoppingCartItemSpecParams.SortingType.DescendingPrice>@ShoppingCartItemSpecParams.SortingType.DescendingPrice.ToString()</option>
+            <option value=@ShoppingCartItemSpecParams.SortingType.DescendingTotalPrice>@ShoppingCartItemSpecParams.SortingType.DescendingTotalPrice.ToString()</option>
+            <option value=@ShoppingCartItemSpecParams.SortingType.DescendingImageFile>@ShoppingCartItemSpecParams.SortingType.DescendingImageFile.ToString()</option>
+        </optgroup>
+    </InputSelect>
+    <div class="productdata" @attributes=InputAttributes>
         <div>
             <div class="productrowdata">
                 <label>Name</label>
@@ -33,6 +53,7 @@ else
                     <th class="productsrowdata">TotalPrice</th>
                     <th class="productsrowdata">ImageFile</th>
                     <th class="productsrowdata">IsDeleted</th>
+                    <th class="productsrowdata">Delete</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,6 +70,13 @@ else
                             <td class="productsrowdata price">@singleShoppingCartItem.TotalPrice.ToString("0.00")</td>
                             <td class="productsrowdata">@singleShoppingCartItem.ImageFile</td>
                             <td class="productsrowdata">@singleShoppingCartItem.IsDeleted</td>
+                            <td class="productsrowdata">
+                                <span class="oi oi-trash"
+                                      @onclick:stopPropagation="true"
+                                      @onclick:preventDefault="true"
+                                      @onclick="(() => HandleRowClickDeleteShoppingCartsAsync(id))">
+                                </span>
+                            </td>
                         </tr>
                     </ItemContent>
                     <Placeholder>
@@ -57,5 +85,13 @@ else
                 </Virtualize>
             </tbody>
         </table>
+        <div>
+            Shopping carts items count = @shoppingCartItemsCount
+        </div>
+    </div>
+    <div>
+        <eShopping.Common.Components.Modal Visible=deletingInProgress Title="Delete" OnClose="(visible) => deletingInProgress = visible">
+            <span>Deleting in progress...</span>
+        </eShopping.Common.Components.Modal>
     </div>
 }

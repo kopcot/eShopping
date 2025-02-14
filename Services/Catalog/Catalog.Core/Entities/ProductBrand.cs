@@ -8,7 +8,6 @@ namespace Catalog.Core.Entities
     [Index(nameof(Name), IsUnique = true)]
     public class ProductBrand : BaseEntity
     {
-        [Required]
         public string Name { get; set; }
         //public virtual List<Product> Products { get; set; }
     }

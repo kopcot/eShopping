@@ -1,0 +1,31 @@
+﻿@if (Visible)
+{
+    <div id="myModal" class="modal @VisibleModal" style="z-index:@ZIndex">
+        <div class="modal-content @ModalCssStyle" @attributes=InputAttributes>
+            <div class="modal-header @HeadContentCssStyle">
+                <h3>@Title</h3>
+                @if (HeadContent != null)
+                {
+                    @HeadContent
+                }
+                <span class="close-btn" onclick="@(() => OnCloseAction())">&times;</span>
+            </div>
+            <div class="modal-body @ChildContentCssStyle">
+                @if (ChildContent != null)
+                {
+                    @ChildContent
+                }
+                else
+                {
+                    <p>No content available.</p>
+                }
+            </div>
+            @if (FooterContent != null)
+            {
+                <div class="modal-footer @FooterContentCssStyle">
+                    @FooterContent
+                </div>
+            }
+        </div>
+    </div>
+}

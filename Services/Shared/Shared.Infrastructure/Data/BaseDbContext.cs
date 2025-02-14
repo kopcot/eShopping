@@ -3,7 +3,7 @@ using Shared.Core.Entities;
 
 namespace Shared.Infrastructure.Data
 {
-    public class BaseDbContext : DbContext
+    public abstract class BaseDbContext : DbContext
     {
         public BaseDbContext(DbContextOptions options) : base(options)
         {
@@ -37,17 +37,23 @@ namespace Shared.Infrastructure.Data
                 {
                     case EntityState.Added:
                         entry.Entity.Created = DateTime.UtcNow;
+                        entry.Entity.ModifiedCount ??= 0;
                         entry.Entity.ModifiedCount++;
                         break;
                     case EntityState.Modified:
                         entry.Entity.Modified = DateTime.UtcNow;
+                        entry.Entity.ModifiedCount ??= 0;
                         entry.Entity.ModifiedCount++;
                         break;
                     case EntityState.Deleted:
-                        entry.Entity.IsDeleted = true;
-                        entry.Entity.Modified = DateTime.UtcNow;
-                        entry.Entity.ModifiedCount++;
-                        entry.State = EntityState.Modified;
+                        if (!entry.Entity.IsHardDeleted)
+                        { 
+                            entry.Entity.IsDeleted = true;
+                            entry.Entity.Modified = DateTime.UtcNow;
+                            entry.Entity.ModifiedCount ??= 0;
+                            entry.Entity.ModifiedCount++;
+                            entry.State = EntityState.Modified;
+                        }
                         break;
                     //case EntityState.Unchanged:
                     //    break;

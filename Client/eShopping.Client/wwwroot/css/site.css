@@ -34,6 +34,10 @@ a, .btn-link {
     outline: 1px solid red;
 }
 
+.invalidInput {
+    box-shadow: 0 0 4px 2px red;
+}
+
 .validation-message {
     color: red;
 }

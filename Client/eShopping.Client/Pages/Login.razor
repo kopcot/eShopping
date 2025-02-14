@@ -1,4 +1,5 @@
 ﻿@attribute [Route(PagePathUrl)]
+@attribute [AllowAnonymous]
 
 <h1>Please login</h1>
 <form action="user/login" method="post">
@@ -12,12 +13,7 @@
             <input type=@passwordType name="password" />
             <InputCheckbox @bind-Value=showPassword />
         </div>
-        <input type="submit" value="Login" />
+        <button type="submit" >Login</button>
     </div>
 </form>
-
-@code {
-    private bool showPassword { get; set; }
-    private string passwordType => showPassword ? "text" : "password";
-    public const string PagePathUrl = "/login";
-}
+<button @onclick="@(async _ => Navigation.NavigateTo("createuser"))">Create new user</button>

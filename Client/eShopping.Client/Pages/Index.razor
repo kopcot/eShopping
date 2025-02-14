@@ -1,15 +1,22 @@
 ﻿@page "/"
 @attribute [Authorize]
+@inject OpenTelemetry.Trace.Tracer Tracer;
 
 <PageTitle>Index</PageTitle>
 
 <h1>Hello!</h1>
 
-Welcome to eshopping application.
+Welcome to eShopping application.
 
 @code {
     protected override async Task OnInitializedAsync()
     {
+        using var span = Tracer.StartActiveSpan($"{nameof(Index)}_{nameof(OnInitializedAsync)}");
         await base.OnInitializedAsync();
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        using var span = Tracer.StartActiveSpan($"{nameof(Index)}_{nameof(OnParametersSetAsync)}");
+        await Task.CompletedTask;
     }
 }

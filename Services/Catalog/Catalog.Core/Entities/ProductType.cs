@@ -8,7 +8,7 @@ namespace Catalog.Core.Entities
     [Index(nameof(Name), IsUnique = true)]
     public class ProductType : BaseEntity
     {
-        [Required]
+        [MinLength(3, ErrorMessage = "Name too short")]
         public string Name { get; set; }
         //public virtual List<Product>? Products { get; set; }
     }

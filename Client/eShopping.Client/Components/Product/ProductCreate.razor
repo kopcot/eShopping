@@ -1,4 +1,5 @@
-﻿@if (ProductsImageFolders == null ||
+﻿@using eShopping.Common.SimpleComponent
+@if (ProductsImageFolders == null ||
    ProductBrands == null ||
    ProductTypes == null)
 {
@@ -6,68 +7,141 @@
 }
 else
 {
-    <div style="display: flex;justify-content: space-between;flex-wrap: wrap;">
-        <EditForm Model="NewProduct" OnValidSubmit="(Submit)" FormName="CreateNewProduct">
+    <div style="display: flex;justify-content: space-between;flex-wrap: wrap;" @attributes=InputAttributes>
+        <EditForm Model="@ModelProduct" OnValidSubmit="(ValidSubmit)" FormName="CreateNewProduct">
             <DataAnnotationsValidator />
             <ValidationSummary />
             <div class="productdata">
                 <div style="max-width:50%">
-                    <div class="productrowdata">
-                        <label>Name:</label>
-                        <InputText @bind-Value="NewProduct!.Name" />
-                    </div>
-                    <div class="productrowdata">
-                        <label>Summary:</label>
-                        <InputText @bind-Value="NewProduct!.Summary" />
-                    </div>
-                    <div class="productrowdata">
-                        <label>Description:</label>
-                        <InputText @bind-Value="NewProduct!.Description" />
-                    </div>
-                    <div class="productrowdata">
-                        <label>ImageFileName:</label>
-                        <InputText @bind-Value="NewProduct!.ImageFileName" />
-                    </div>
-                    <div class="productrowdata">
-                        <label>ImageFolder:</label>
-                        <InputSelect TValue=string
-                                     Value=NewProduct!.ImageFileDirectory!.Directory
-                                     ValueExpression="(()=>NewProduct!.ImageFileDirectory!.Directory)"
-                                     ValueChanged="(x => NewProduct!.ImageFileDirectory = ProductsImageFolders.FirstOrDefault(pif => pif.Directory == x))">
-                            @foreach (var imageFolder in ProductsImageFolders)
-                            {
-                                <option value=@imageFolder.Directory>@imageFolder.Directory</option>
-                            }
-                        </InputSelect>
-                    </div>
-                    <div class="productrowdata">
-                        <label>Brand:</label>
-                        <InputSelect TValue=string
-                                     Value=NewProduct!.Brand!.Name
-                                     ValueExpression="(()=>NewProduct!.Brand!.Name)"
-                                     ValueChanged="(x => NewProduct!.Brand = ProductBrands.FirstOrDefault(pif => pif.Name == x))">
-                            @foreach (var productBrand in ProductBrands)
-                            {
-                                <option value=@productBrand.Name>@productBrand.Name</option>
-                            }
-                        </InputSelect>
-                    </div>
-                    <div class="productrowdata">
-                        <label>Type:</label>
-                        <InputSelect TValue=string
-                                     Value=NewProduct!.Type!.Name
-                                     ValueExpression="(()=>NewProduct!.Type!.Name)"
-                                     ValueChanged="(x => NewProduct!.Type = ProductTypes.FirstOrDefault(pif => pif.Name == x))">
-                            @foreach (var productType in ProductTypes)
-                            {
-                                <option value=@productType.Name>@productType.Name</option>
-                            }
-                        </InputSelect>
-                    </div>
+                    <SimpleInputText CssClass="productrowdata"
+                                     CssClassInvalid="invalidInput"
+                                     Value=@ModelProduct!.Name
+                                     ValueExpression="@(()=>ModelProduct!.Name)"
+                                     ValueChanged="@(x => ModelProduct!.Name = x)"
+                                     Caption="Name" />
+                    <SimpleInputText CssClass="productrowdata"
+                                     CssClassInvalid="invalidInput"
+                                     @bind-Value="ModelProduct!.Summary"
+                                     Caption="Summary" />
+                    <SimpleInputText CssClass="productrowdata"
+                                     CssClassInvalid="invalidInput"
+                                     @bind-Value="ModelProduct!.Description"
+                                     Caption="Description" />
+                    <SimpleInputNumber CssClass="productrowdata"
+                                       CssClassInvalid="invalidInput"
+                                       @bind-Value="ModelProduct!.Price"
+                                       Caption="Price" />
+                    <SimpleInputText CssClass="productrowdata"
+                                     CssClassInvalid="invalidInput"
+                                     @bind-Value="ModelProduct!.ImageFileName"
+                                     Caption="ImageFileName" />
+                    <SimpleInputSelect CssClass="productrowdata"
+                                       CssClassInvalid="invalidInput"
+                                       @bind-Value="ModelProduct!.ImageDirectory"
+                                       Caption="ImageFolder"
+                                       ValueOptions="@(ProductsImageFolders.ToDictionary(x => x.Directory, x => x.Directory))"
+                                       AdditionalValidationProperties="@(new List<FieldIdentifier>() {
+                                            new FieldIdentifier(ModelProduct, nameof(ModelProduct.ImageDirectoryId)),})"
+                                       AddEmptyValueOption=@true>
+                    </SimpleInputSelect>
+                    <SimpleInputSelect CssClass="productrowdata"
+                                       CssClassInvalid="invalidInput"
+                                       @bind-Value="ModelProduct!.BrandName"
+                                       Caption="Brand"
+                                       ValueOptions="@(ProductBrands.ToDictionary(x => x.Name, x => x.Name))"
+                                       AdditionalValidationProperties="@(new List<FieldIdentifier>() {
+                                            new FieldIdentifier(ModelProduct, nameof(ModelProduct.BrandId)),})"
+                                       AddEmptyValueOption=@true>
+                    </SimpleInputSelect>
+                    <SimpleInputSelect CssClass="productrowdata"
+                                       CssClassInvalid="invalidInput"
+                                       @bind-Value="ModelProduct!.TypeName"
+                                       Caption="Type"
+                                       ValueOptions="@(ProductTypes.ToDictionary(x => x.Name, x => x.Name))"
+                                       AdditionalValidationProperties="@(new List<FieldIdentifier>() {
+                                            new FieldIdentifier(ModelProduct, nameof(ModelProduct.TypeId)),})"
+                                       AddEmptyValueOption=@true>
+                    </SimpleInputSelect>
                 </div>
             </div>
             <button type="submit">Submit</button>
         </EditForm>
+        <!--
+        <EditForm EditContext="@EditContext" OnValidSubmit="(ValidSubmit)" FormName="CreateNewProduct">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="productdata">
+                <div style="max-width:50%">
+                    <SimpleInputText CssClass="productrowdata"
+                                     CssClassInvalid="invalidInput"
+                                     Value=@NewProduct!.Name
+                                     ValueExpression="@(()=>NewProduct!.Name)"
+                                     ValueChanged="@(x => NewProduct!.Name = x)"
+                                     Caption="Name"/>
+                    <SimpleInputText CssClass="productrowdata"
+                                     CssClassInvalid="invalidInput"
+                                     @bind-Value="NewProduct!.Summary"
+                                     Caption="Summary"/>
+                    <SimpleInputText CssClass="productrowdata"
+                                     CssClassInvalid="invalidInput"
+                                     @bind-Value="NewProduct!.Description"
+                                     Caption="Description" />
+                    <SimpleInputNumber CssClass="productrowdata"
+                                       CssClassInvalid="invalidInput"
+                                       @bind-Value="NewProduct!.Price"
+                                       Caption="Price" />
+                    <SimpleInputText CssClass="productrowdata"
+                                     CssClassInvalid="invalidInput"
+                                     @bind-Value="NewProduct!.ImageFileName"
+                                     Caption="ImageFileName" />
+                    <SimpleInputSelect CssClass="productrowdata"
+                                       CssClassInvalid="invalidInput"
+                                       Value=@NewProduct.ImageFileDirectory.Directory
+                                       ValueExpression="@(()=>NewProduct.ImageFileDirectory.Directory)"
+                                       ValueChanged="@(x => 
+                                       { 
+                                            NewProduct!.ImageFileDirectory = ProductsImageFolders.FirstOrDefault(pif => pif.Directory == x) ?? new Catalog.Core.Entities.ImageFileDirectory();
+                                            NewProduct!.ImageFileID = NewProduct!.ImageFileDirectory?.Id ?? 0;
+                                       })"
+                                       ValueOptions="@(ProductsImageFolders.ToDictionary(x => x.Directory, x => x.Directory))"
+                                       Caption="ImageFolder"
+                                       AdditionalValidationProperties="@(new List<FieldIdentifier>() {FieldIdentifier.Create(() => NewProduct!.ImageFileID)})"
+                                       AddEmptyValueOption=@true>
+                    </SimpleInputSelect>
+                    <SimpleInputSelect CssClass="productrowdata"
+                                       CssClassInvalid="invalidInput"
+                                       Value=@NewProduct.Brand.Name
+                                       ValueExpression="@(()=>NewProduct.Brand!.Name)"
+                                       ValueOptions="@(ProductBrands.ToDictionary(x => x.Name, x => x.Name))"
+                                       ValueChanged="@(x =>
+                                       {
+                                            NewProduct!.Brand = ProductBrands.FirstOrDefault(pif => pif.Name == x) ?? new Catalog.Core.Entities.ProductBrand();
+                                            NewProduct!.BrandID = NewProduct!.Brand?.Id ?? 0;
+                                       })"
+                                       Caption="Brand"
+                                       AdditionalValidationProperties="@(new List<FieldIdentifier>() {
+                                            new FieldIdentifier(NewProduct, nameof(NewProduct.BrandID)),})"
+                                       AddEmptyValueOption=@true>
+                    </SimpleInputSelect>
+                    <SimpleInputSelect CssClass="productrowdata"
+                                       CssClassInvalid="invalidInput"
+                                       Value=@NewProduct.Type.Name
+                                       ValueExpression="@(()=>NewProduct.Type.Name)"
+                                       ValueChanged="@(x =>
+                                       {
+                                            NewProduct!.Type = ProductTypes.FirstOrDefault(pif => pif.Name == x) ?? new Catalog.Core.Entities.ProductType();
+                                            NewProduct!.TypeID = NewProduct!.Type?.Id ?? 0;
+                                       })"
+                                       ValueOptions="@(ProductTypes.ToDictionary(x => x.Name, x => x.Name))"
+                                       Caption="Type"
+                                       AdditionalValidationProperties="@(new List<FieldIdentifier>() {FieldIdentifier.Create(() => NewProduct!.TypeID)})"
+                                       AddEmptyValueOption=@true>
+                    </SimpleInputSelect>
+                </div>
+            </div>
+            <button type="submit">Submit</button>
+        </EditForm>
+        -->
         <div>
             <div>
                 @if (SelectedImageFolder != null)
@@ -116,6 +190,14 @@ else
                 </div>
             }
         </div>
+    </div>
+    <hr>
+    <div>
+        <ProductBrandCreate></ProductBrandCreate>
+    </div>
+    <hr>
+    <div>
+        <ProductTypeCreate></ProductTypeCreate>
     </div>
 }
 

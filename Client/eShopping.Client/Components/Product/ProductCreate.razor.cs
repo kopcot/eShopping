@@ -1,13 +1,14 @@
 using Catalog.Core.Entities;
 using eShopping.Client.Data;
-using eShopping.Client.Pages;
+using eShopping.Client.Model;
+using eShopping.Common.Components;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using OpenTelemetry.Trace;
 using System.Net;
 using E = Catalog.Core.Entities;
 
-namespace eShopping.Client.Components.Product 
+namespace eShopping.Client.Components.Product
 {
     public partial class ProductCreate : IDisposable
     {
@@ -17,6 +18,10 @@ namespace eShopping.Client.Components.Product
         private NavigationManager Navigation { get; set; }
         [Inject]
         private IErrorService ErrorService { get; set; }
+        [Inject]
+        public Tracer Tracer { get; set; }
+        [Parameter(CaptureUnmatchedValues = true)]
+        public Dictionary<string, object>? InputAttributes { get; set; }
         [Parameter, EditorRequired]
         public string PagePathUrl { get; set; }
         private IEnumerable<ProductBrand>? ProductBrands { get; set; }
@@ -26,32 +31,40 @@ namespace eShopping.Client.Components.Product
         private ImageFileDirectory? SelectedImageFolder { get; set; } = new ImageFileDirectory();
         private string NewImageFolder { get; set; } = string.Empty;
         private E.Product? NewProduct { get; set; }
+        private Model.ModelProductCreate ModelProduct { get; set; }
         private IBrowserFile? InputFileSource { get; set; }
         private string? FilePathTarget { get; set; }
         private string? FileNameTarget { get; set; }
         private bool disposedValue;
         protected override async Task OnInitializedAsync()
         {
-            await base.OnInitializedAsync();
+            using (var span = Tracer.StartActiveSpan($"{nameof(ProductCreate)}_{nameof(OnInitializedAsync)}"))
+            {
+                await base.OnInitializedAsync();
+            };
         }
         protected override async Task OnParametersSetAsync()
         {
-            HttpStatusCode? httpStatusCode;
-            bool result;
-            Exception? exception;
-
-            (result, httpStatusCode, exception, ProductBrands) = await CatalogService.GetProductBrandsAsync<ProductBrand>(string.Empty);
-            await ErrorService.AddSmartErrorAsync(!result, Navigation.Uri, httpStatusCode, exception, null);
-            (result, httpStatusCode, exception, ProductTypes) = await CatalogService.GetProductTypesAsync<ProductType>(string.Empty);
-            await ErrorService.AddSmartErrorAsync(!result, Navigation.Uri, httpStatusCode, exception, null);
-            (result, httpStatusCode, exception, ProductsImageFolders) = await CatalogService.GetProductImageFoldersAsync<ImageFileDirectory>(string.Empty);
-            await ErrorService.AddSmartErrorAsync(!result, Navigation.Uri, httpStatusCode, exception, null);
-            SelectedImageFolder = ProductsImageFolders?.FirstOrDefault() ?? new ImageFileDirectory();
-            NewProduct = new E.Product()
+            using (var span = Tracer.StartActiveSpan($"{nameof(ProductCreate)}_{nameof(OnParametersSetAsync)}"))
             {
-                Brand = new ProductBrand(),
-                Type = new ProductType(),
-                ImageFileDirectory = new ImageFileDirectory()
+                HttpStatusCode? httpStatusCode;
+                bool result;
+                Exception? exception;
+
+                (result, httpStatusCode, exception, ProductBrands) = await CatalogService.GetProductBrandsAsync<ProductBrand>(string.Empty);
+                await ErrorService.AddSmartErrorAsync(!result, Navigation.Uri, httpStatusCode, exception, null);
+                (result, httpStatusCode, exception, ProductTypes) = await CatalogService.GetProductTypesAsync<ProductType>(string.Empty);
+                await ErrorService.AddSmartErrorAsync(!result, Navigation.Uri, httpStatusCode, exception, null);
+                (result, httpStatusCode, exception, ProductsImageFolders) = await CatalogService.GetProductImageFoldersAsync<ImageFileDirectory>(string.Empty);
+                await ErrorService.AddSmartErrorAsync(!result, Navigation.Uri, httpStatusCode, exception, null);
+                SelectedImageFolder = ProductsImageFolders?.FirstOrDefault() ?? new ImageFileDirectory();
+                NewProduct = new E.Product()
+                {
+                    Brand = new ProductBrand(),
+                    Type = new ProductType(),
+                    ImageFileDirectory = new ImageFileDirectory()
+                };
+                ModelProduct = new Model.ModelProductCreate(NewProduct, ProductBrands!, ProductTypes!, ProductsImageFolders!);
             };
         }
 
@@ -137,8 +150,13 @@ namespace eShopping.Client.Components.Product
                 await ErrorService.AddSmartErrorAsync(!result, Navigation.Uri, httpStatusCode, exception, null);
             }
         }
-        private async Task Submit(EditContext context)
+        private async Task SubmitInvalid(EditContext context)
         {
+            await Task.CompletedTask;
+        }
+        private async Task ValidSubmit(EditContext context)
+        {
+            NewProduct = ModelProduct.ToDomain();
             if (NewProduct is null)
             {
                 ArgumentNullException exceptionNewProduct = new(nameof(NewProduct));
@@ -149,10 +167,13 @@ namespace eShopping.Client.Components.Product
             (var result, var httpStatusCode, var exception, var createdProduct) = await CatalogService.CreateProductAsync<E.Product, E.Product>(NewProduct);
             await ErrorService.AddSmartErrorAsync(!result, Navigation.Uri, httpStatusCode, exception, null);
 
-            UriBuilder uriBuilder = new(Navigation.Uri);
-            uriBuilder.Query = null;
-            uriBuilder.Path = PagePathUrl + "/" + createdProduct!.Id;
-            Navigation.NavigateTo(uriBuilder.Uri.AbsoluteUri);
+            if (result)
+            { 
+                UriBuilder uriBuilder = new(Navigation.Uri);
+                uriBuilder.Query = null;
+                uriBuilder.Path = PagePathUrl + "/" + createdProduct!.Id;
+                Navigation.NavigateTo(uriBuilder.Uri.AbsoluteUri);
+            }
             await Task.CompletedTask;
 
         }

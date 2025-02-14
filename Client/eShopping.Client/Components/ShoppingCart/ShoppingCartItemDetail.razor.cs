@@ -1,14 +1,9 @@
 using Basket.Core.Entities;
 using eShopping.Client.Data;
-using eShopping.Client.Pages;
-using IdentityModel.OidcClient;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.WebUtilities;
-using System;
+using OpenTelemetry.Trace;
 using System.Net;
-using System.Net.Mail;
 using E = Basket.Core.Entities;
-using SS = Shared.Core.Specs;
 
 namespace eShopping.Client.Components.ShoppingCart
 {
@@ -22,6 +17,10 @@ namespace eShopping.Client.Components.ShoppingCart
         private NavigationManager Navigation { get; set; }
         [Inject]
         private IErrorService ErrorService { get; set; }
+        [Inject]
+        public Tracer Tracer { get; set; }
+        [Parameter(CaptureUnmatchedValues = true)]
+        public Dictionary<string, object>? InputAttributes { get; set; }
         [Parameter, EditorRequired]
         public int? ShoppingCartId { get; set; }
         [Parameter, EditorRequired]
@@ -30,24 +29,30 @@ namespace eShopping.Client.Components.ShoppingCart
 
         protected override async Task OnInitializedAsync()
         {
-            await base.OnInitializedAsync();
+            using (var span = Tracer.StartActiveSpan($"{nameof(ShoppingCartItemDetail)}_{nameof(OnInitializedAsync)}"))
+            {
+                await base.OnInitializedAsync();
+            };
         }
         protected override async Task OnParametersSetAsync()
         {
-            HttpStatusCode? httpStatusCode;
-            bool result;
-            Exception? exception;
+            using (var span = Tracer.StartActiveSpan($"{nameof(ShoppingCartItemDetail)}_{nameof(OnParametersSetAsync)}"))
+            {
+                HttpStatusCode? httpStatusCode;
+                bool result;
+                Exception? exception;
 
-            if (ShoppingCartId is not null &&
-                ShoppingCartItemId is not null)
-            {
-                (result, httpStatusCode, exception, shoppingCartItem) = await ShoppingCartService.GetShoppingCartItemByIdsAsync<E.ShoppingCartItem>((int)ShoppingCartId, (int)ShoppingCartItemId);
-                await ErrorService.AddSmartErrorAsync(!result, Navigation.Uri, httpStatusCode, exception, null);
-            }
-            else
-            {
-                shoppingCartItem = null;
-            }
+                if (ShoppingCartId is not null &&
+                    ShoppingCartItemId is not null)
+                {
+                    (result, httpStatusCode, exception, shoppingCartItem) = await ShoppingCartService.GetShoppingCartItemByIdsAsync<E.ShoppingCartItem>((int)ShoppingCartId, (int)ShoppingCartItemId);
+                    await ErrorService.AddSmartErrorAsync(!result, Navigation.Uri, httpStatusCode, exception, null);
+                }
+                else
+                {
+                    shoppingCartItem = null;
+                }
+            };
         }
         #region Dispose
         protected virtual void Dispose(bool disposing)

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
+using OpenTelemetry.Trace;
 using Shared.Api.Controllers;
 using Shared.Core.Specs;
 using Shared.Infrastructure.Data;
@@ -27,7 +28,8 @@ namespace Catalog.API.Controllers
             IImageFileRepository imageFileRepository,
             IRedisCache redisCache,
             IUserService userService,
-            ILogger<CatalogController> logger) : base(userService, logger)
+            ILogger<CatalogController> logger,
+            Tracer tracer) : base(userService, logger, tracer)
         {
             _productRepository = productRepository;
             _productBrandRepository = productBrandRepository;
@@ -43,6 +45,8 @@ namespace Catalog.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<Product>), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<IEnumerable<Product>>> GetAllProductsAsync([FromQuery] Pagination? pagination, [FromQuery] ProductSpecParams catalogSpecParam, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetAllProductsAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -65,6 +69,8 @@ namespace Catalog.API.Controllers
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<ActionResult<Product?>> GetProductByIdAsync(int id, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetProductByIdAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -86,6 +92,8 @@ namespace Catalog.API.Controllers
         [ProducesResponseType(typeof(long), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<long>> GetProductsCountAsync([FromQuery] ProductSpecParams catalogSpecParam, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetProductsCountAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -105,15 +113,17 @@ namespace Catalog.API.Controllers
         [ProducesResponseType(typeof(Product), (int)HttpStatusCode.Created)]
         public async Task<ActionResult<Product>> CreateProductAsync(Product product, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(CreateProductAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
 
-            await _productRepository.AddAsync(product, cancellationToken);
+            var created = await _productRepository.AddAsync(product, cancellationToken);
             _logger.LogInformation($"User = {user}. Create product, id : {product.Id}");
 
             await _redisCache.StoreRedisCacheData(HttpContext, product, cancellationToken);
-            return Created(string.Empty, product);
+            return created ? Created(string.Empty, product) : BadRequest();
         }
         [HttpDelete]
         [Route(nameof(Product) + "/{id}")]
@@ -121,6 +131,8 @@ namespace Catalog.API.Controllers
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<ActionResult<bool>> RemoveProductTypeAsync(int id, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(RemoveProductTypeAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -128,7 +140,7 @@ namespace Catalog.API.Controllers
             var deleted = await _productRepository.DeleteByIdAsync(id, cancellationToken);
             _logger.LogInformation($"User = {user}. Deleted product, id : {id}");
 
-            await _redisCache.RemoveRedisCacheDataAsync(HttpContext, cancellationToken);
+            await _redisCache.RemoveRedisCacheDataAsync(cancellationToken);
             return deleted ? Ok(deleted) : NotFound();
         }
         #endregion
@@ -140,6 +152,8 @@ namespace Catalog.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<ProductBrand>), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<IEnumerable<ProductBrand>>> GetAllProductBrandsAsync([FromQuery] Pagination? pagination, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetAllProductBrandsAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -160,6 +174,8 @@ namespace Catalog.API.Controllers
         [ProducesResponseType(typeof(long), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<long>> GetProductBrandCountAsync(CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetProductBrandCountAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -180,15 +196,21 @@ namespace Catalog.API.Controllers
         [ProducesResponseType(typeof(ProductBrand), (int)HttpStatusCode.Created)]
         public async Task<ActionResult<ProductBrand>> CreateProductBrandAsync(ProductBrand productBrand, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(CreateProductBrandAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
 
-            await _productBrandRepository.AddAsync(productBrand, cancellationToken);
+            var existing = await _productBrandRepository.GetByNameAsync(productBrand.Name, cancellationToken);
+            if (existing.Any())
+                return StatusCode((int)HttpStatusCode.NotModified, "Already existing");
+
+            var created = await _productBrandRepository.AddAsync(productBrand, cancellationToken);
             _logger.LogInformation($"User = {user}. Create product brand, id : {productBrand.Id}");
 
             await _redisCache.StoreRedisCacheData(HttpContext, productBrand, cancellationToken);
-            return Created(string.Empty, productBrand);
+            return created ? Created(string.Empty, productBrand) : BadRequest();
         }
         #endregion
 
@@ -199,6 +221,8 @@ namespace Catalog.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<ProductType>), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<IEnumerable<ProductType>>> GetAllProductTypesAsync([FromQuery] Pagination? pagination, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetAllProductTypesAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -219,6 +243,8 @@ namespace Catalog.API.Controllers
         [ProducesResponseType(typeof(long), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<long>> GetProductTypeCountAsync(CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetProductTypeCountAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -239,15 +265,21 @@ namespace Catalog.API.Controllers
         [ProducesResponseType(typeof(ProductType), (int)HttpStatusCode.Created)]
         public async Task<ActionResult<ProductType>> CreateProductTypeAsync(ProductType productType, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(CreateProductTypeAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
 
-            await _productTypeRepository.AddAsync(productType, cancellationToken);
+            var existing = await _productTypeRepository.GetByNameAsync(productType.Name, cancellationToken);
+            if (existing.Any())
+                return StatusCode((int)HttpStatusCode.NotModified, "Already existing");
+
+            var created = await _productTypeRepository.AddAsync(productType, cancellationToken);
             _logger.LogInformation($"User = {user}. Create product type, id : {productType.Id}");
 
             await _redisCache.StoreRedisCacheData(HttpContext, productType, cancellationToken);
-            return Created(string.Empty, productType);
+            return created ? Created(string.Empty, productType) : BadRequest();
         }
         #endregion
         #region Image directories
@@ -257,6 +289,8 @@ namespace Catalog.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<ImageFileDirectory>), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<IEnumerable<ImageFileDirectory>>> GetAllImageFileDirectoriesAsync([FromQuery] Pagination? pagination, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(GetAllImageFileDirectoriesAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -276,6 +310,8 @@ namespace Catalog.API.Controllers
         [ProducesResponseType(typeof(ImageFileDirectory), (int)HttpStatusCode.Created)]
         public async Task<ActionResult<ProductType>> CreateImageFileDirectoryAsync(ImageFileDirectory imageFileDirectory, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(CreateImageFileDirectoryAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -292,6 +328,8 @@ namespace Catalog.API.Controllers
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<ActionResult<bool>> RemoveImageFileDirectoryAsync(int id, CancellationToken cancellationToken = default)
         {
+            using var span = _tracer.StartActiveSpan(nameof(RemoveImageFileDirectoryAsync));
+
             (var result, var user, var exception) = await _userService.GetUser(Request);
             if (!result)
                 return StatusCode((int)HttpStatusCode.InternalServerError, exception);
@@ -299,7 +337,7 @@ namespace Catalog.API.Controllers
             var deleted = await _imageFileRepository.DeleteByIdAsync(id, cancellationToken);
             _logger.LogInformation($"User = {user}. Deleted image file directory, id : {id}");
 
-            await _redisCache.RemoveRedisCacheDataAsync(HttpContext, cancellationToken);
+            await _redisCache.RemoveRedisCacheDataAsync(cancellationToken);
             return deleted ? Ok(deleted) : NotFound();
         }
         #endregion

@@ -12,6 +12,7 @@ namespace Users.Infrastructure.Data
         {
         }
         public DbSet<User> Users { get; set; }
+        public DbSet<IpConnection> IpConnection { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

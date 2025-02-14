@@ -1,0 +1,25 @@
+﻿@using eShopping.Common.SimpleComponent
+
+<h3>New Product - Brand</h3>
+
+<EditForm Model="ProductBrand" OnValidSubmit="(Submit)" FormName="CreateNewProductBrand">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="productdata">
+        <div style="max-width:50%">
+            <SimpleInputText CssClass="productrowdata" 
+                             CssClassInvalid="invalidInput"
+                             @bind-Value="ProductBrand!.Name"
+                             Caption="Name" />
+        </div>
+    </div>
+    <button type="submit">Submit</button>
+</EditForm>
+@if (CreatedProductBrand != null)
+{
+    <div>
+        Product brand <strong>@CreatedProductBrand.Name</strong> was created at <strong>@CreatedProductBrand.Created</strong>
+    </div>
+}
+
+

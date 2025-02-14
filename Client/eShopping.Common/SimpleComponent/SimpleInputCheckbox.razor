@@ -1,0 +1,40 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@inherits InputCheckbox
+
+<div class="@CssClass">
+    <label>@Caption:</label>
+    <InputCheckbox @bind-Value=CurrentValue class="@cssClassInvalid" />
+    @if (ChildContent != null)
+    {
+        @ChildContent
+    }
+    
+</div>
+@code {
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+    [Parameter]
+    public new string CssClass { get; set; }
+    [Parameter]
+    public string Caption { get; set; } = "Caption";
+    [Parameter]
+    public List<FieldIdentifier> AdditionalValidationProperties { get; set; } = [];
+    [Parameter]
+    public string CssClassInvalid { get; set; }
+    private string cssClassInvalid
+    {
+        get
+        {
+            var isInvalid = EditContext.GetValidationMessages(base.FieldIdentifier).Any();
+            AdditionalValidationProperties.ForEach(va => isInvalid |= EditContext.GetValidationMessages(va).Any());
+            return isInvalid ? CssClassInvalid : string.Empty;
+        }
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+        if (EditContext.IsModified(base.FieldIdentifier))
+            AdditionalValidationProperties.ForEach(va => EditContext.NotifyFieldChanged(va));
+    }
+}
+

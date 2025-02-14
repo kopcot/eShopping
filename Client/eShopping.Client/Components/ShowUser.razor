@@ -1,8 +1,13 @@
-﻿<AuthorizeView>
+﻿@inject NavigationManager Navigation
+<AuthorizeView>
     <Authorized>
         <label>@context.User.Claims.First().Value</label>
+        <button @onclick="@(async _ => Navigation.NavigateTo("changepassword"))">change password</button>
         <form action="user/logout" method="post">
-            <input type="submit" value="Logout"/>
+            <button type="submit">
+                <span class="oi oi-account-logout" />
+                Logout
+            </button>
         </form>
     </Authorized>
     <NotAuthorized>

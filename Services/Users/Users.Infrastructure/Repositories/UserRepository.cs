@@ -17,7 +17,11 @@ namespace Users.Infrastructure.Repositories
         }
         public async Task<User?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
         {
-            return await _dbSet.FirstOrDefaultAsync(u => u.Name.ToLower() == name.ToLower(), cancellationToken);
+            return await _dbSet.Include(user => user.IpConnections).SingleOrDefaultAsync(u => u.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase), cancellationToken);
+        }
+        public async Task<bool> IsNameExistsAsync(string name, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet.AnyAsync(u => u.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase), cancellationToken);
         }
         public async new Task<bool> AddAsync(User user, CancellationToken cancellationToken = default)
         {
@@ -36,6 +40,10 @@ namespace Users.Infrastructure.Repositories
             _dbSet.Update(user);
             await _dbContext.SaveChangesAsync(cancellationToken);
             return true;
+        }
+        public async new Task<User?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet.Include(user => user.IpConnections).SingleOrDefaultAsync(user => user.Id == id, cancellationToken);
         }
 
     }

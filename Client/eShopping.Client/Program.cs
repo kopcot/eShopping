@@ -1,12 +1,17 @@
 using eShopping.Client.Data;
 using eShopping.Client.Data.HealthCheck;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.FileProviders;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Instrumentation.AspNetCore;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using System.Diagnostics;
 
 namespace eShopping.Client
 {
@@ -15,6 +20,11 @@ namespace eShopping.Client
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            if ((Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") is string runningInContainer) &&
+                runningInContainer.Equals("true"))
+                builder.Configuration.AddJsonFile("appsettings.Container.json", optional: true, reloadOnChange: true);
+            else
+                builder.Configuration.AddJsonFile("appsettings.LocalNetwork.json", optional: true, reloadOnChange: true);
 
             var app = BuildServices(builder);
 
@@ -25,8 +35,10 @@ namespace eShopping.Client
         {
             // Add services to the container.
             builder.Services.AddRazorPages();
+            builder.Services.AddHttpClient();
             builder.Services.AddServerSideBlazor();
             builder.Services.AddScoped<IErrorService, ErrorService>();
+
 
             // IHttpContextAccessor for Claim identities
             builder.Services.AddHttpContextAccessor();
@@ -37,24 +49,27 @@ namespace eShopping.Client
                         builder.Configuration["ConnectionData:CatalogApi:Server"],
                         builder.Configuration["ConnectionData:CatalogApi:RouteAPI"],
                         httpClient,
-                        service.GetRequiredService<ILoggerFactory>(),
-                        service.GetRequiredService<IHttpContextAccessor>()))
+                        service.GetRequiredService<ILogger<CatalogService>>(),
+                        service.GetRequiredService<IHttpContextAccessor>(),
+                        service.GetRequiredService<Tracer>()))
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5));
             builder.Services.AddHttpClient<IShoppingCartService, ShoppingCartService>(
                 (httpClient, service) => new ShoppingCartService(
                         builder.Configuration["ConnectionData:BasketApi:Server"],
                         builder.Configuration["ConnectionData:BasketApi:RouteAPI"],
                         httpClient,
-                        service.GetRequiredService<ILoggerFactory>(),
-                        service.GetRequiredService<IHttpContextAccessor>()))
+                        service.GetRequiredService<ILogger<ShoppingCartService>>(),
+                        service.GetRequiredService<IHttpContextAccessor>(),
+                        service.GetRequiredService<Tracer>()))
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5));
             builder.Services.AddHttpClient<IUsersService, UsersService>(
                 (httpClient, service) => new UsersService(
                         builder.Configuration["ConnectionData:UsersApi:Server"],
                         builder.Configuration["ConnectionData:UsersApi:RouteAPI"],
                         httpClient,
-                        service.GetRequiredService<ILoggerFactory>(),
-                        service.GetRequiredService<IHttpContextAccessor>()))
+                        service.GetRequiredService<ILogger<UsersService>>(),
+                        service.GetRequiredService<IHttpContextAccessor>(),
+                        service.GetRequiredService<Tracer>()))
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5));
 
             builder.Services.AddHealthChecks()
@@ -64,23 +79,6 @@ namespace eShopping.Client
                     args: new object[] { (double)512, (double)256 },
                     tags: new[] { "Unhealthy = 512MB", "Degraded = 256MB" },
                     timeout: new TimeSpan(0, 1, 0));
-            builder.Services.AddHealthChecksUI(setupSettings: setup =>
-            {
-                setup.MaximumHistoryEntriesPerEndpoint(50)
-                     .SetMinimumSecondsBetweenFailureNotifications(300)
-                     .SetEvaluationTimeInSeconds(30);
-            })
-                //.AddInMemoryStorage();
-                .AddMySqlStorage(builder.Configuration["ConnectionStrings:DefaultConnection"]!,
-                    configureOptions: congfigure =>
-                    {
-                        congfigure
-                            .ConfigureWarnings(b => b.Log(
-                                (RelationalEventId.ConnectionOpened, LogLevel.Debug),
-                                (RelationalEventId.ConnectionClosed, LogLevel.Debug),
-                                (RelationalEventId.CommandExecuting, LogLevel.Debug),
-                                (RelationalEventId.CommandExecuted, LogLevel.Debug)));
-                    });
 
             builder.Services.AddAuthentication(options => options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(configureOptions: options =>
@@ -109,6 +107,44 @@ namespace eShopping.Client
             builder.Services.AddAuthorization();
             builder.Services.AddCascadingAuthenticationState();
 
+            builder.Services.AddOpenTelemetry()
+                .UseOtlpExporter(OtlpExportProtocol.HttpProtobuf, new(builder.Configuration["ConnectionStrings:OtlpExporter"]!))
+                .ConfigureResource(resource => resource.AddService(
+                    serviceName: "eShopping.Client",
+                    serviceInstanceId: Environment.MachineName
+                    ))
+                .WithTracing(tracing =>
+                {
+                    tracing
+                        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("eShopping.Client"))
+                        .SetSampler(new AlwaysOnSampler())
+                        .AddSource("eShopping.Client")
+                        // Metrics provides by ASP.NET Core in .NET 8
+                        .AddSource("Microsoft.AspNetCore")
+                        .AddSource("Microsoft.AspNetCore.Hosting")
+                        .AddSource("Microsoft.AspNetCore.Server.Kestrel")
+                        //.AddSource("System.Net.Http.HttpClient.health-checks")
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddEntityFrameworkCoreInstrumentation()
+                        .AddRedisInstrumentation()
+                        .AddConnectorNet();
+                    builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(options =>
+                        {
+                            options.RecordException = true;
+                        });
+                })
+                .WithMetrics(metrics =>
+                {
+                    metrics
+                        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("eShopping.Client"))
+                        .AddRuntimeInstrumentation()
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation();
+                });
+
+            builder.Services.AddSingleton(TracerProvider.Default.GetTracer("eShopping.Client"));
+
             return builder.Build();
         }
 
@@ -122,7 +158,7 @@ namespace eShopping.Client
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
             app.MapHealthChecks("/api/health");
             app.MapHealthChecks("/api/health/detail", new HealthCheckOptions
             {
@@ -151,7 +187,6 @@ namespace eShopping.Client
                     [HealthStatus.Unhealthy] = StatusCodes.Status200OK
                 }
             });
-            app.UseHealthChecksUI();
 
             app.UseStaticFiles();
             // added for content folder

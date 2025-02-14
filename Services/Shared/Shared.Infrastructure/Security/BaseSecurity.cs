@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Shared.Infrastructure.Security
 {
-    public class BaseSecurity : IBaseSecurity
+    public abstract class BaseSecurity : IBaseSecurity
     {
         public async Task<(bool, string?, Exception?)> GetUser(HttpRequest request)
         {

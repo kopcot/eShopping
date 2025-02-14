@@ -1,22 +1,19 @@
-using Catalog.Core.Entities;
 using Catalog.Core.Specs;
-using eShopping.Client.Data;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
-using Microsoft.AspNetCore.WebUtilities;
-using Shared.Core.Specs;
-using System.Net;
+using OpenTelemetry.Trace;
 
 namespace eShopping.Client.Pages
 {
     public partial class Products : IDisposable
     {
         public const string PagePathUrl = "/products";
+        [Inject]
+        public Tracer Tracer { get; set; }
         [Parameter]
         public int? Id { get; set; }
         [Parameter]
         public string PageAction { get; set; }
-        public int QuerySorting { get; set; } = (int)ProductSpecParams.SortingType.NoSorting;
+        public ProductSpecParams.SortingType QuerySorting { get; set; } = ProductSpecParams.SortingType.NoSorting;
         public int QueryProductCount { get; set; } = 10;
         public int QueryPageIndex { get; set; } = 0;
         private PageTab CurrentTab { get; set; }
@@ -24,10 +21,12 @@ namespace eShopping.Client.Pages
 
         protected override async Task OnInitializedAsync()
         {
+            using var span = Tracer.StartActiveSpan($"{nameof(Products)}_{nameof(OnInitializedAsync)}");
             await base.OnInitializedAsync();
         }
         protected override async Task OnParametersSetAsync()
         {
+            using var span = Tracer.StartActiveSpan($"{nameof(Products)}_{nameof(OnParametersSetAsync)}");
             CurrentTab = GetPageTab();
 
             await Task.CompletedTask;
@@ -55,8 +54,8 @@ namespace eShopping.Client.Pages
         }
         internal static class PageActions
         {
-            public const string CreateNew = "New";
-            public const string Edit = "Edit";
+            internal const string CreateNew = "New";
+            internal const string Edit = "Edit";
         }
         #endregion Enums
 

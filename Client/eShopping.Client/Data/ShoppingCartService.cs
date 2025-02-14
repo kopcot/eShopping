@@ -1,80 +1,58 @@
 ﻿using Basket.Core.Entities;
+using eShopping.Client.Pages;
+using OpenTelemetry.Trace;
 using System.Net;
 
 namespace eShopping.Client.Data
 {
-    public class ShoppingCartService : IShoppingCartService, IDisposable
+    public class ShoppingCartService : BaseHttpClientService<ShoppingCartService>, IShoppingCartService
     {
-        private readonly HttpResponseResolver _httpResponseResolver;
-        private readonly string? _routeAPI;
-        private readonly ILogger<ShoppingCartService> _logger;
-
-        private bool disposedValue;
-
-        public ShoppingCartService(string? addressIP, string? routeAPI, HttpClient httpClient, ILoggerFactory loggerFactory, IHttpContextAccessor httpContextAccessor)
+        public ShoppingCartService(string? addressIP, string? routeAPI, HttpClient httpClient, ILogger<ShoppingCartService> logger, IHttpContextAccessor httpContextAccessor, Tracer tracer) 
+            : base(addressIP, routeAPI, httpClient, logger, httpContextAccessor, tracer)
         {
-            ArgumentNullException.ThrowIfNull(addressIP);
-            ArgumentNullException.ThrowIfNull(routeAPI);
-            ArgumentNullException.ThrowIfNull(httpClient);
-            ArgumentNullException.ThrowIfNull(loggerFactory);
-
-            _routeAPI = routeAPI;
-
-            _logger = loggerFactory.CreateLogger<ShoppingCartService>();
-
-            _httpResponseResolver = new HttpResponseResolver(httpClient, addressIP, _logger, httpContextAccessor);
         }
         public async Task<(bool, HttpStatusCode?, Exception?, IEnumerable<T>?)> GetShoppingCartsAsync<T>(string queryString, CancellationToken? cancellationToken) where T : ShoppingCart
         {
-            return await _httpResponseResolver.ResolveGetResponse<IEnumerable<T>>(_routeAPI + typeof(T).Name + queryString, cancellationToken);
+            using var span = _tracer.StartActiveSpan(nameof(GetShoppingCartsAsync));
+            return await _httpResponseResolver.ResolveGetResponse<IEnumerable<T>>($"{_routeAPI}{typeof(T).Name}{queryString}", cancellationToken);
         }
         public async Task<(bool, HttpStatusCode?, Exception?, long?)> GetShoppingCartsCountAsync<T>(CancellationToken? cancellationToken) where T : ShoppingCart
         {
-            return await _httpResponseResolver.ResolveGetResponse<long?>(_routeAPI + typeof(T).Name + "/count", cancellationToken);
+            using var span = _tracer.StartActiveSpan(nameof(GetShoppingCartsCountAsync));
+            return await _httpResponseResolver.ResolveGetResponseV2<long?>($"{_routeAPI}{typeof(T).Name}/count", cancellationToken);
         }
-        public async Task<(bool, HttpStatusCode?, Exception?, T?)> GetShoppingCartByIdAsync<T>(int shoppingCartId, CancellationToken? cancellationToken) where T : ShoppingCart
+        public async Task<(bool, HttpStatusCode?, Exception?, T?)> GetShoppingCartByIdAsync<T>(int shoppingCartId, string queryString, CancellationToken? cancellationToken) where T : ShoppingCart
         {
-            return await _httpResponseResolver.ResolveGetResponse<T?>(_routeAPI + typeof(T).Name + "/" + shoppingCartId, cancellationToken);
+            using var span = _tracer.StartActiveSpan(nameof(GetShoppingCartByIdAsync));
+            return await _httpResponseResolver.ResolveGetResponse<T?>($"{_routeAPI}{typeof(T).Name}/{shoppingCartId}{queryString}", cancellationToken);
         }
         public async Task<(bool, HttpStatusCode?, Exception?, T?)> GetShoppingCartItemByIdAsync<T>(int shoppingCartId, CancellationToken? cancellationToken) where T : ShoppingCartItem
         {
-            return await _httpResponseResolver.ResolveGetResponse<T?>(_routeAPI + typeof(T).Name + "/" + shoppingCartId, cancellationToken);
+            using var span = _tracer.StartActiveSpan(nameof(GetShoppingCartItemByIdAsync));
+            return await _httpResponseResolver.ResolveGetResponse<T?>($"{_routeAPI}{typeof(T).Name}/{shoppingCartId}", cancellationToken);
         }
         public async Task<(bool, HttpStatusCode?, Exception?, T?)> GetShoppingCartItemByIdsAsync<T>(int shoppingCartId, int shoppingCartItemId, CancellationToken? cancellationToken) where T : ShoppingCartItem
         {
-            return await _httpResponseResolver.ResolveGetResponse<T?>(_routeAPI + typeof(T).Name + "/" + shoppingCartId + "/" + shoppingCartItemId, cancellationToken);
+            using var span = _tracer.StartActiveSpan(nameof(GetShoppingCartItemByIdsAsync));
+            return await _httpResponseResolver.ResolveGetResponse<T?>($"{_routeAPI}{typeof(T).Name}/{shoppingCartId}/{shoppingCartItemId}" , cancellationToken);
         }
-        #region Dispose
-        protected virtual void Dispose(bool disposing)
+
+        public async Task<(bool, HttpStatusCode?, Exception?, bool)> DeleteShoppingCartByIdAsync<T>(int shoppingCartId, CancellationToken? cancellationToken = null) where T : ShoppingCart
         {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    // TODO: dispose managed state (managed objects)
-                }
-
-                _httpResponseResolver.Dispose();
-
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
-                disposedValue = true;
-            }
+            using var span = _tracer.StartActiveSpan(nameof(DeleteShoppingCartByIdAsync));
+            return await _httpResponseResolver.ResolveDeleteResponse<bool>($"{_routeAPI}{typeof(T).Name}/{shoppingCartId}", cancellationToken);
         }
 
-        // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        ~ShoppingCartService()
+        public async Task<(bool, HttpStatusCode?, Exception?, bool)> DeleteShoppingCartItemByIdAsync<T>(int shoppingCartItemId, CancellationToken? cancellationToken = null) where T : ShoppingCartItem
         {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: false);
+            using var span = _tracer.StartActiveSpan(nameof(DeleteShoppingCartItemByIdAsync));
+            return await _httpResponseResolver.ResolveDeleteResponse<bool>($"{_routeAPI}{typeof(T).Name}/{shoppingCartItemId}", cancellationToken);
         }
 
-        public void Dispose()
+        public async Task<(bool, HttpStatusCode?, Exception?, long?)> GetShoppingCartItemsCountAsync<T>(int shoppingCartId, CancellationToken? cancellationToken = null) where T : ShoppingCartItem
         {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+            using var span = _tracer.StartActiveSpan(nameof(GetShoppingCartItemsCountAsync));
+            return await _httpResponseResolver.ResolveGetResponse<long?>($"{_routeAPI}{typeof(T).Name}/{shoppingCartId}/count", cancellationToken);
         }
-        #endregion Dispose
     }
 }

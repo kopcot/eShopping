@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+	  <PackageReference Include="AspNetCore.HealthChecks.UI" Version="8.0.0" />
+	  <PackageReference Include="AspNetCore.HealthChecks.UI.InMemory.Storage" Version="8.0.0" />
+	  <PackageReference Include="AspNetCore.HealthChecks.UI.MySql.Storage" Version="7.0.0" />
+	  <PackageReference Include="MySql.Data.OpenTelemetry" Version="8.4.0" />
+	  <PackageReference Include="OpenTelemetry.Api" Version="1.8.1" />
+	  <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.8.1" />
+	  <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.8.1" />
+	  <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.8.1" />
+	  <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.0.0-beta.11" />
+	  <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.8.1" />
+	  <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.8.0" />
+	  <PackageReference Include="OpenTelemetry.Instrumentation.StackExchangeRedis" Version="1.0.0-rc9.14" />
+	  <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.1" />
+	  <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\ui\resources\1ae4e3706fe3f478fcc1.woff2">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
